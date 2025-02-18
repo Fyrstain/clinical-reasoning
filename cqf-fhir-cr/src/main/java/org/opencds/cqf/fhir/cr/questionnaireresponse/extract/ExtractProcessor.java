@@ -20,14 +20,16 @@ import org.slf4j.LoggerFactory;
 public class ExtractProcessor implements IExtractProcessor {
     protected static final Logger logger = LoggerFactory.getLogger(ExtractProcessor.class);
     protected final ProcessItem itemProcessor;
+    protected final ProcessComponentItem componentItemProcessor;
     protected final ProcessDefinitionItem definitionItemProcessor;
 
     public ExtractProcessor() {
-        this(new ProcessItem(), new ProcessDefinitionItem());
+        this(new ProcessItem(), new ProcessComponentItem(),new ProcessDefinitionItem());
     }
 
-    private ExtractProcessor(ProcessItem processItem, ProcessDefinitionItem processDefinitionItem) {
+    private ExtractProcessor(ProcessItem processItem, ProcessComponentItem componentItemProcessor, ProcessDefinitionItem processDefinitionItem) {
         this.itemProcessor = processItem;
+        this.componentItemProcessor = componentItemProcessor;
         this.definitionItemProcessor = processDefinitionItem;
     }
 
@@ -90,6 +92,24 @@ public class ExtractProcessor implements IExtractProcessor {
                 : (IBaseReference) SerializationUtils.clone(subject);
         if (request.isDefinitionItem(item)) {
             processDefinitionItem(request, item, resources, groupSubject);
+        } else if (request.isObservationItem(item)) {
+            processObservationItem(request, item, questionnaireCodeMap, resources, groupSubject);
+            //Process children with a parent observation ?
+            request.getItems(item.getResponseItem()).forEach(childResponseItem -> {
+                if (childResponseItem.getExtension().stream()
+                    .noneMatch(e -> e.getUrl().equals(Constants.SDC_QUESTIONNAIRE_RESPONSE_IS_SUBJECT))) {
+                    var childItem = new ItemPair(
+                        request.getQuestionnaireItem(childResponseItem, request.getItems(item.getItem())),
+                        childResponseItem);
+                    if (!request.getItems(childResponseItem).isEmpty()) {
+                        processGroupItem(request, childItem, questionnaireCodeMap, resources, groupSubject);
+                    } else if (request.hasAnswer(item)) {
+                        processItem(request, childItem, questionnaireCodeMap, resources, groupSubject);
+                    } else {
+                        processComponentItem(request, childItem, questionnaireCodeMap, resources, groupSubject);
+                    }
+                }
+            });
         } else {
             request.getItems(item.getResponseItem()).forEach(childResponseItem -> {
                 if (childResponseItem.getExtension().stream()
@@ -128,7 +148,22 @@ public class ExtractProcessor implements IExtractProcessor {
             IBaseReference subject) {
         try {
             itemProcessor.processItem(
-                    request, item.getResponseItem(), item.getItem(), questionnaireCodeMap, resources, subject);
+                request, item.getResponseItem(), item.getItem(), questionnaireCodeMap, resources, subject);
+        } catch (Exception e) {
+            request.logException(e.getMessage());
+            throw e;
+        }
+    }
+
+    protected void processComponentItem(
+        ExtractRequest request,
+        ItemPair item,
+        Map<String, List<IBaseCoding>> questionnaireCodeMap,
+        List<IBaseResource> resources,
+        IBaseReference subject) {
+        try {
+            componentItemProcessor.processItem(
+                request, item.getResponseItem(), item.getItem(), questionnaireCodeMap, resources, subject);
         } catch (Exception e) {
             request.logException(e.getMessage());
             throw e;

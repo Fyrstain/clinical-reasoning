@@ -179,18 +179,46 @@ public class ProcessDefinitionItem {
             var dateDefs = getDateDefs(resourceDefinition);
             if (dateDefs != null && !dateDefs.isEmpty()) {
                 dateDefs.forEach(dateDef -> {
-                    try {
-                        var authoredValue = dateDef.getDatatype()
+                    if (dateDef instanceof BaseRuntimeChildDatatypeDefinition){
+                        try {
+                            var authoredValue = ((BaseRuntimeChildDatatypeDefinition) dateDef).getDatatype()
                                 .getConstructor(String.class)
                                 .newInstance(dateAuthored.getValueAsString());
 
-                        request.getModelResolver().setValue(resource, dateDef.getElementName(), authoredValue);
-                    } catch (Exception ex) {
-                        var message = String.format(
+                            request.getModelResolver().setValue(resource, dateDef.getElementName(), authoredValue);
+                        } catch (Exception ex) {
+                            var message = String.format(
                                 "Error encountered processing item %s: Error setting property (%s) on resource type (%s): %s",
                                 linkId, dateDef.getElementName(), resource.fhirType(), ex.getMessage());
-                        logger.error(message);
-                        request.logException(message);
+                            logger.error(message);
+                            request.logException(message);
+                        }
+                    } else if (dateDef instanceof RuntimeChildChoiceDefinition){
+                        try {
+
+                            Class<? extends IBase> timeType = ((RuntimeChildChoiceDefinition) dateDef).getValidChildTypes()
+                                .stream()
+                                .filter(type -> type.getSimpleName().equals("DateTimeType"))
+                                .findFirst().orElse(null);
+
+                            if (timeType != null) {
+                                var authoredValue = timeType
+                                    .getConstructor(String.class)
+                                    .newInstance(dateAuthored.getValueAsString());
+                                request.getModelResolver().setValue(resource, dateDef.getElementName(), authoredValue);
+                            } else {
+                                var message = String.format(
+                                    "Error encountered processing item %s: Error setting property (%s) on resource type (%s) (choice doesn't include DateTime)",
+                                    linkId, dateDef.getElementName(), resource.fhirType());
+                                logger.info(message);
+                            }
+                        } catch (Exception ex) {
+                            var message = String.format(
+                                "Error encountered processing item %s: Error setting property (%s) on resource type (%s): %s",
+                                linkId, dateDef.getElementName(), resource.fhirType(), ex.getMessage());
+                            logger.error(message);
+                            request.logException(message);
+                        }
                     }
                 });
             }
@@ -275,20 +303,21 @@ public class ProcessDefinitionItem {
         if (definition.getChildByName("recorder") != null) {
             return "recorder";
         }
-        return definition.getName().equals("Observation") ? "performer" : null;
+        return definition.getName().equals("Observation") || definition.getName().equals("RiskAssessment") ? "performer" : null;
     }
 
-    private List<BaseRuntimeChildDatatypeDefinition> getDateDefs(BaseRuntimeElementDefinition<?> definition) {
+    private List<BaseRuntimeDeclaredChildDefinition> getDateDefs(BaseRuntimeElementDefinition<?> definition) {
         List<BaseRuntimeChildDefinition> results = new ArrayList<>();
         results.add(definition.getChildByName("onset"));
         results.add(definition.getChildByName("issued"));
         results.add(definition.getChildByName("effective"));
         results.add(definition.getChildByName("recordDate"));
-
+        results.add(definition.getChildByName("recordedDate"));
+        results.add(definition.getChildByName("occurrence[x]"));
         return results.stream()
-                .filter(BaseRuntimeChildDatatypeDefinition.class::isInstance)
-                .map(d -> (BaseRuntimeChildDatatypeDefinition) d)
-                .collect(Collectors.toList());
+            .filter(BaseRuntimeDeclaredChildDefinition.class::isInstance)
+            .map(d -> (BaseRuntimeDeclaredChildDefinition) d)
+            .collect(Collectors.toList());
     }
 
     private void resolveMeta(IBaseResource resource, String definition) {

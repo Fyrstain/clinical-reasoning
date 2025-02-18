@@ -32,12 +32,11 @@ public class CodeMap {
         var childItems = request.getItems(item);
         if (!childItems.isEmpty()) {
             childItems.forEach(child -> processQuestionnaireItems(request, child, questionnaireCodeMap));
-        } else {
-            var linkId = request.resolvePathString(item, "linkId");
-            var codes = request.resolvePathList(item, "code").stream()
-                    .map(c -> (IBaseCoding) c)
-                    .collect(Collectors.toList());
-            questionnaireCodeMap.put(linkId, codes);
         }
+        var linkId = request.resolvePathString(item, "linkId");
+        var codes = request.resolvePathList(item, "code").stream()
+                .map(c -> (IBaseCoding) c)
+                .collect(Collectors.toList());
+        questionnaireCodeMap.put(linkId, codes);
     }
 }

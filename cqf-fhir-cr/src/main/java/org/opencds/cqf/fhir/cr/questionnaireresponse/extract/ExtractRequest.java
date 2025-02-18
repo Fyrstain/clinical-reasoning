@@ -101,6 +101,14 @@ public class ExtractRequest implements IQuestionnaireRequest {
                         item.getItem() == null ? item.getResponseItem() : item.getItem(), "definition"));
     }
 
+    public boolean isObservationItem(ItemPair item) {
+        return item.getItem() != null && !resolvePathList(item.getItem(), "code").isEmpty();
+    }
+
+    public boolean hasAnswer(ItemPair item) {
+        return item.getResponseItem() != null && !resolvePathList(item.getResponseItem(), "answer").isEmpty();
+    }
+
     public IBaseExtension<?, ?> getItemExtractionContext() {
         var qrExt = getExtensions(questionnaireResponse).stream()
                 .filter(e -> e.getUrl().equals(Constants.SDC_QUESTIONNAIRE_ITEM_EXTRACTION_CONTEXT))

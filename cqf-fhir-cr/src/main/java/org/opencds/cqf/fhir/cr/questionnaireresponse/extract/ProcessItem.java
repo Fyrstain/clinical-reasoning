@@ -22,9 +22,14 @@ public class ProcessItem {
                     "Unable to retrieve Questionnaire code map for Observation based extraction");
         }
         var categoryExt =
-                request.getExtensionByUrl(answerItem, Constants.SDC_QUESTIONNAIRE_OBSERVATION_EXTRACT_CATEGORY);
+            request.getExtensionByUrl(answerItem, Constants.SDC_QUESTIONNAIRE_OBSERVATION_EXTRACT_CATEGORY);
+        if (categoryExt == null) {
+            categoryExt =
+                request.getExtensionByUrl(questionnaireItem, Constants.SDC_QUESTIONNAIRE_OBSERVATION_EXTRACT_CATEGORY);
+        }
         var answers = request.resolvePathList(answerItem, "answer", IBaseBackboneElement.class);
         if (!answers.isEmpty()) {
+            IBaseExtension<?, ?> finalCategoryExt = categoryExt;
             answers.forEach(answer -> {
                 var answerItems = request.getItems(answer);
                 if (!answerItems.isEmpty()) {
@@ -35,16 +40,26 @@ public class ProcessItem {
                     if (questionnaireCodeMap.get(linkId) != null
                             && !questionnaireCodeMap.get(linkId).isEmpty()) {
                         resources.add(createObservationFromItemAnswer(
-                                request,
-                                answer,
-                                questionnaireItem,
-                                linkId,
-                                subject,
-                                questionnaireCodeMap,
-                                categoryExt));
+                            request,
+                            answer,
+                            questionnaireItem,
+                            linkId,
+                            subject,
+                            questionnaireCodeMap,
+                            finalCategoryExt));
                     }
                 }
             });
+        } else {
+            var linkId = request.resolvePathString(answerItem, "linkId");
+            resources.add(createObservationFromItemAnswer(
+                request,
+                null,
+                questionnaireItem,
+                linkId,
+                subject,
+                questionnaireCodeMap,
+                categoryExt));
         }
     }
 
