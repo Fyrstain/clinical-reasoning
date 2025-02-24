@@ -1,6 +1,7 @@
 package org.opencds.cqf.fhir.cr.questionnaireresponse.extract;
 
 import java.util.List;
+import java.util.UUID;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.opencds.cqf.fhir.utility.Ids;
@@ -21,6 +22,11 @@ public class ResponseBundle {
             var entry = new org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent();
             entry.setResource((org.hl7.fhir.dstu3.model.Resource) resource);
             entry.setRequest(entryRequest);
+            if (resource.getIdElement().getIdPart() != null){
+                entry.setFullUrl("http://example.org/fhir/" + resource.fhirType() + "/" + resource.getIdElement().getIdPart());
+            } else {
+                entry.setFullUrl(UUID.randomUUID().toString());
+            }
             newBundle.addEntry(entry);
         });
 
@@ -40,6 +46,11 @@ public class ResponseBundle {
                     resource.fhirType() + "/" + resource.getIdElement().getIdPart());
 
             var entry = new org.hl7.fhir.r4.model.Bundle.BundleEntryComponent();
+            if (resource.getIdElement().getIdPart() != null){
+                entry.setFullUrl("http://example.org/fhir/" + resource.fhirType() + "/" + resource.getIdElement().getIdPart());
+            } else {
+                entry.setFullUrl(UUID.randomUUID().toString());
+            }
             entry.setResource((org.hl7.fhir.r4.model.Resource) resource);
             entry.setRequest(entryRequest);
             newBundle.addEntry(entry);
@@ -61,6 +72,11 @@ public class ResponseBundle {
                     resource.fhirType() + "/" + resource.getIdElement().getIdPart());
 
             var entry = new org.hl7.fhir.r5.model.Bundle.BundleEntryComponent();
+            if (resource.getIdElement().getIdPart() != null){
+                entry.setFullUrl("http://example.org/fhir/" + resource.fhirType() + "/" + resource.getIdElement().getIdPart());
+            } else {
+                entry.setFullUrl(UUID.randomUUID().toString());
+            }
             entry.setResource((org.hl7.fhir.r5.model.Resource) resource);
             entry.setRequest(entryRequest);
             newBundle.addEntry(entry);
