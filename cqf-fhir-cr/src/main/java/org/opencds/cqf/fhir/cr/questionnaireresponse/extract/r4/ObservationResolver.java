@@ -66,24 +66,27 @@ public class ObservationResolver {
         obs.setIssuedElement(new InstantType(authoredDate));
         obs.setPerformer(Collections.singletonList(questionnaireResponse.getAuthor()));
 
-        switch (answer.getValue().fhirType()) {
-            case "Coding":
-                obs.setValue(new CodeableConcept().addCoding(answer.getValueCoding()));
-                break;
-            case "date":
-                obs.setValue(new DateTimeType(((DateType) answer.getValue()).getValue()));
-                break;
-            case "decimal":
-            case "integer":
-                if (item.hasExtension(Constants.QUESTIONNAIRE_UNIT)) {
-                    obs.setValue(getQuantity(answer, item));
-                } else {
+        if (answer != null){
+            switch (answer.getValue().fhirType()) {
+                case "Coding":
+                    obs.setValue(new CodeableConcept().addCoding(answer.getValueCoding()));
+                    break;
+                case "date":
+                    obs.setValue(new DateTimeType(((DateType) answer.getValue()).getValue()));
+                    break;
+                case "decimal":
+                case "integer":
+                    if (item.hasExtension(Constants.QUESTIONNAIRE_UNIT)) {
+                        obs.setValue(getQuantity(answer, item));
+                    } else {
+                        obs.setValue(answer.getValue());
+                    }
+                    break;
+                default:
                     obs.setValue(answer.getValue());
-                }
-                break;
-            default:
-                obs.setValue(answer.getValue());
+            }
         }
+
         obs.setDerivedFrom(Collections.singletonList(new Reference(questionnaireResponse)));
 
         var linkIdExtension = new Extension();

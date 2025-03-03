@@ -314,6 +314,7 @@ public class ProcessDefinitionItem {
         results.add(definition.getChildByName("recordDate"));
         results.add(definition.getChildByName("recordedDate"));
         results.add(definition.getChildByName("occurrence[x]"));
+        results.add(definition.getChildByName("performed[x]"));
         return results.stream()
             .filter(BaseRuntimeDeclaredChildDefinition.class::isInstance)
             .map(d -> (BaseRuntimeDeclaredChildDefinition) d)
