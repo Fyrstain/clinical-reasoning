@@ -22,11 +22,7 @@ public class ResponseBundle {
             var entry = new org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent();
             entry.setResource((org.hl7.fhir.dstu3.model.Resource) resource);
             entry.setRequest(entryRequest);
-            if (resource.getIdElement().getIdPart() != null){
-                entry.setFullUrl("http://example.org/fhir/" + resource.fhirType() + "/" + resource.getIdElement().getIdPart());
-            } else {
-                entry.setFullUrl(UUID.randomUUID().toString());
-            }
+            entry.setFullUrl(generateFullUrl(resource));
             newBundle.addEntry(entry);
         });
 
@@ -46,11 +42,7 @@ public class ResponseBundle {
                     resource.fhirType() + "/" + resource.getIdElement().getIdPart());
 
             var entry = new org.hl7.fhir.r4.model.Bundle.BundleEntryComponent();
-            if (resource.getIdElement().getIdPart() != null){
-                entry.setFullUrl("http://example.org/fhir/" + resource.fhirType() + "/" + resource.getIdElement().getIdPart());
-            } else {
-                entry.setFullUrl(UUID.randomUUID().toString());
-            }
+            entry.setFullUrl(generateFullUrl(resource));
             entry.setResource((org.hl7.fhir.r4.model.Resource) resource);
             entry.setRequest(entryRequest);
             newBundle.addEntry(entry);
@@ -72,16 +64,20 @@ public class ResponseBundle {
                     resource.fhirType() + "/" + resource.getIdElement().getIdPart());
 
             var entry = new org.hl7.fhir.r5.model.Bundle.BundleEntryComponent();
-            if (resource.getIdElement().getIdPart() != null){
-                entry.setFullUrl("http://example.org/fhir/" + resource.fhirType() + "/" + resource.getIdElement().getIdPart());
-            } else {
-                entry.setFullUrl(UUID.randomUUID().toString());
-            }
+            entry.setFullUrl(generateFullUrl(resource));
             entry.setResource((org.hl7.fhir.r5.model.Resource) resource);
             entry.setRequest(entryRequest);
             newBundle.addEntry(entry);
         });
 
         return newBundle;
+    }
+
+    private static String generateFullUrl(IBaseResource resource) {
+        if (resource.getIdElement().getIdPart() != null) {
+            return "http://example.org/fhir/" + resource.fhirType() + "/" + resource.getIdElement().getIdPart();
+        } else {
+            return UUID.randomUUID().toString();
+        }
     }
 }
