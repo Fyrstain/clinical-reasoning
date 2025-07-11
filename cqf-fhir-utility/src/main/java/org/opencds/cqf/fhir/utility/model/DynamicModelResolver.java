@@ -4,7 +4,9 @@ import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeChildPrimitiveEnumerationDatatypeDefinition;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.instance.model.api.IAnyResource;
 import org.hl7.fhir.instance.model.api.IBase;
@@ -30,6 +32,7 @@ public class DynamicModelResolver extends CachingModelResolverDecorator {
     private static final String ENUMERATION = "Enumeration";
     private static final String PRIMITIVE = "IPrimitiveType";
     private static final String URI = "UriType";
+    private final Map<String, Integer> lastIndexMap = new HashMap<>();
 
     private final FhirContext fhirContext;
 
@@ -189,22 +192,54 @@ public class DynamicModelResolver extends CachingModelResolverDecorator {
                 base.getClass().getName()));
     }
 
-    public void setNestedValue(IBase target, String path, Object value, BaseRuntimeElementCompositeDefinition<?> def) {
+    public void setNestedValue(IBase target, String path, Object value,
+        BaseRuntimeElementCompositeDefinition<?> def) {
         var identifiers = path.split("\\.");
+
         for (int i = 0; i < identifiers.length; i++) {
             var identifier = identifiers[i];
             var isList = identifier.contains("[");
             var isSlice = identifier.contains(":");
             var sliceName = isSlice ? identifier.split(":")[1] : null;
             var isLast = i == identifiers.length - 1;
-            var index = isList ? Character.getNumericValue(identifier.charAt(identifier.indexOf("[") + 1)) : 0;
+
+            int index = 0;
+            String listName = null;
+            if (isList) {
+                var listSpecifier = identifier.substring(
+                    identifier.indexOf("[") + 1,
+                    identifier.indexOf("]")
+                );
+                listName = getTargetPath(identifier, true, isSlice);
+
+                if ("+".equals(listSpecifier)) {
+                    index = Integer.MAX_VALUE;
+                }
+                else if ("=".equals(listSpecifier)) {
+                    index = lastIndexMap.getOrDefault(listName, 0);
+                }
+                else {
+                    index = Integer.parseInt(listSpecifier);
+                }
+            }
+
             var targetPath = getTargetPath(identifier, isList, isSlice);
             var targetDef = def.getChildByName(targetPath);
             var targetValues = targetDef.getAccessor().getValues(target);
+
+            if (index == Integer.MAX_VALUE) {
+                index = targetValues.size();
+            }
+            if (isList && listName != null) {
+                lastIndexMap.put(listName, index);
+            }
+
             var targetValue = (targetValues.size() >= index + 1 && !isLast)
-                    ? getTargetValueFromList(sliceName, index, targetValues)
-                    : getTargetValue(target, value, isLast, targetPath, targetDef);
+                ? getTargetValueFromList(sliceName, index, targetValues)
+                : getTargetValue(target, value, isLast, targetPath, targetDef);
+
             target = targetValue == null ? target : targetValue;
+
             if (!isLast) {
                 var nextDef = fhirContext.getElementDefinition(target.getClass());
                 def = (BaseRuntimeElementCompositeDefinition<?>) nextDef;
@@ -214,7 +249,7 @@ public class DynamicModelResolver extends CachingModelResolverDecorator {
 
     private String getTargetPath(String identifier, boolean isList, boolean isSlice) {
         if (isList) {
-            return identifier.replaceAll("\\[\\d\\]", "");
+            return identifier.replaceAll("\\[.*?\\]", "");
         }
         if (isSlice) {
             return identifier.substring(0, identifier.indexOf(":"));
