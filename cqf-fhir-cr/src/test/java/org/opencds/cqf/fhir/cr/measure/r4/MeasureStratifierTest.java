@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.opencds.cqf.fhir.api.Repository;
 import org.opencds.cqf.fhir.cr.measure.r4.Measure.Given;
+import org.opencds.cqf.fhir.cr.measure.r4.Measure.When;
 import org.opencds.cqf.fhir.cr.measure.r4.utils.TestDataGenerator;
 import org.opencds.cqf.fhir.utility.repository.ig.IgRepository;
 
@@ -24,6 +25,7 @@ import org.opencds.cqf.fhir.utility.repository.ig.IgRepository;
  * Mainly using a Cohort Measure as the example scoringType for simplicity of parsing results.
  *
  */
+@SuppressWarnings("squid:S2699")
 class MeasureStratifierTest {
     private static final String CLASS_PATH = "org/opencds/cqf/fhir/cr/measure/r4";
     private static final Repository repository = new IgRepository(
@@ -173,8 +175,9 @@ class MeasureStratifierTest {
      */
     @Test
     void cohortBooleanNoIdStrat() {
+        final When evaluate = given.when().measureId("CohortBooleanStratNoId").evaluate();
         try {
-            given.when().measureId("CohortBooleanStratNoId").evaluate().then().report();
+            evaluate.then();
             fail("should throw a missing Id scenario");
         } catch (NullPointerException e) {
             assertTrue(e.getMessage().contains("id is required on all Elements of type: Measure.group.stratifier"));
@@ -205,15 +208,31 @@ class MeasureStratifierTest {
                 .measureId("CohortBooleanStratComponent")
                 .evaluate()
                 .then()
-                .hasStatus(MeasureReportStatus.ERROR)
-                .hasContainedOperationOutcome()
-                .hasContainedOperationOutcomeMsg("multi-component stratifiers are not yet supported")
+                .hasStatus(MeasureReportStatus.COMPLETE)
+                .group("group-1")
+                .stratifierById("stratifier-1")
+                .stratumCount(2)
+                .stratumByComponentText("38")
+                .hasComponentStratifierCount(2)
+                .firstPopulation()
+                .hasCount(5)
+                .up()
+                .up()
+                .stratumByComponentText("35")
+                .hasComponentStratifierCount(2)
+                .firstPopulation()
+                .hasCount(5)
+                .up()
+                .up()
+                .up()
+                .up()
                 .report();
     }
 
     /**
-     * Ratio Measure with Resource Basis where Stratifier defined by component expression that results in Encounter Resources for the Measure population.
-     * Given that Population results are "Encounter" resources, intersection of results should be allowed
+     * Ratio Measure with Resource Basis where Stratifier defined by expression that results in two different ages.
+     * Given that Population results are "Encounter" resources, intersection of results is based on subject
+     * related Encounters where their age matches the stratifier criteria results
      */
     @Test
     void ratioResourceValueStrat() {
@@ -221,13 +240,25 @@ class MeasureStratifierTest {
         given.when()
                 .measureId("RatioResourceStratValue")
                 .evaluate()
+                .reportType("subject-list")
                 .then()
+                .subjectResultsValidation()
                 .firstGroup()
-                .firstStratifier()
-                .stratumCount(9) // one per Encounter resource
-                .stratum("Encounter/patient-1-encounter-1")
-                .hasScore("0.0") // make sure stratum score
-                .firstPopulation()
+                .stratifierById("stratifier-2")
+                .stratum("35")
+                .population("denominator")
+                .hasCount(6)
+                .hasStratumPopulationSubjectResults()
+                .up()
+                .population("numerator")
+                .hasCount(1)
+                .up()
+                .up()
+                .stratum("38")
+                .population("denominator")
+                .hasCount(5)
+                .up()
+                .population("numerator")
                 .hasCount(1)
                 .up()
                 .up()
@@ -237,9 +268,8 @@ class MeasureStratifierTest {
     }
 
     /**
-     * Ratio Measure with Resource Basis where Stratifier defined by component expression that results in CodeableConcept value of 'M' or 'F' for the Measure population.
-     * Given that Population results are "Encounter" resources, intersection of results with Patient.gender is not possible. All results would be empty
-     * This should throw an error
+     * Ratio Measure with Resource Basis where Stratifier defined by expression that results in Encounter.status per subject.
+     * Given that Encounter.status will return multiple results for a single subject, it is considered an invalid Stratifier
      */
     @Test
     void ratioResourceDifferentTypeStrat() {
@@ -247,16 +277,14 @@ class MeasureStratifierTest {
                 .measureId("RatioResourceStratDifferentType")
                 .evaluate()
                 .then()
-                .hasStatus(MeasureReportStatus.ERROR)
                 .hasContainedOperationOutcome()
-                .hasContainedOperationOutcomeMsg(
-                        "stratifier expression criteria results for expression: [Gender Stratification] must fall within accepted types for population basis: [Encounter] for Measure: http://example.com/Measure/RatioResourceStratDifferentType")
+                .hasContainedOperationOutcomeMsg("stratifiers may not return multiple values for subject")
                 .report();
     }
 
     /**
-     * Ratio Measure with Resource Basis where Stratifier defined by component expression that results in Encounter Resources for the Measure population.
-     * Given that Population results are "Encounter" resources, intersection of results should be allowed
+     * Ratio Measure with Boolean Basis where Stratifier defined by expression that results in gender stratification for the Measure population.
+     * intersection of results should be allowed
      */
     @Test
     void ratioBooleanValueStrat() {
@@ -280,5 +308,26 @@ class MeasureStratifierTest {
                 .up()
                 .up()
                 .report();
+    }
+    /**
+     * Cannot define a Stratifier with both component criteria and expression criteria
+     * You can only define one or the other
+     */
+    @Test
+    void twoStatifierCriteria() {
+        try {
+            given.when()
+                    .measureId("CohortBooleanStratComponentInvalid")
+                    .evaluate()
+                    .then()
+                    .report();
+            fail("should throw an exception");
+        } catch (InvalidRequestException exception) {
+            assertTrue(
+                    exception
+                            .getMessage()
+                            .contains(
+                                    "Measure stratifier: stratifier-1, has both component and stratifier criteria expression defined. Only one should be specified"));
+        }
     }
 }

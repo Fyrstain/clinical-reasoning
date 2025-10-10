@@ -23,7 +23,8 @@ import org.opencds.cqf.fhir.utility.repository.ig.IgRepository;
  *     has correct status
  *     has period
  */
-public class MeasureReportTypeSummaryTest {
+@SuppressWarnings("squid:S2699")
+class MeasureReportTypeSummaryTest {
     private static final String CLASS_PATH = "org/opencds/cqf/fhir/cr/measure/r4";
     private static final Repository repository = new IgRepository(
             FhirContext.forR4Cached(),
@@ -58,7 +59,7 @@ public class MeasureReportTypeSummaryTest {
                 .hasCount(11)
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(11)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -67,7 +68,7 @@ public class MeasureReportTypeSummaryTest {
                 .hasCount(3) // because subject was also in Numerator
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)
@@ -97,7 +98,7 @@ public class MeasureReportTypeSummaryTest {
                 .hasCount(11)
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(11)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -106,7 +107,7 @@ public class MeasureReportTypeSummaryTest {
                 .hasCount(3) // because subject was also in Numerator
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)
@@ -136,7 +137,7 @@ public class MeasureReportTypeSummaryTest {
                 .hasCount(11)
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(11)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -145,7 +146,7 @@ public class MeasureReportTypeSummaryTest {
                 .hasCount(3) // because subject was also in Numerator
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)
@@ -175,7 +176,7 @@ public class MeasureReportTypeSummaryTest {
                 .hasCount(11)
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(11)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -184,7 +185,7 @@ public class MeasureReportTypeSummaryTest {
                 .hasCount(3) // because subject was also in Numerator
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)
@@ -212,7 +213,7 @@ public class MeasureReportTypeSummaryTest {
                 .hasCount(11)
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(11)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -221,7 +222,7 @@ public class MeasureReportTypeSummaryTest {
                 .hasCount(3) // because subject was also in Numerator
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)

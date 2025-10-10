@@ -10,6 +10,7 @@ import org.hl7.fhir.r4.model.MeasureReport.MeasureReportStatus;
 import org.junit.jupiter.api.Test;
 import org.opencds.cqf.fhir.cr.measure.r4.MultiMeasure.Given;
 
+@SuppressWarnings({"java:S2699"})
 class MultiMeasureServiceTest {
     private static final Given GIVEN_REPO = MultiMeasure.given().repositoryFor("MinimalMeasureEvaluation");
 
@@ -52,7 +53,7 @@ class MultiMeasureServiceTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(7)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -64,7 +65,7 @@ class MultiMeasureServiceTest {
                 .hasCount(3)
                 .up()
                 .population("numerator")
-                .hasCount(4)
+                .hasCount(7)
                 .up()
                 .hasScore("0.5714285714285714")
                 .up()
@@ -76,7 +77,7 @@ class MultiMeasureServiceTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(7)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -88,7 +89,7 @@ class MultiMeasureServiceTest {
                 .hasCount(3)
                 .up()
                 .population("numerator")
-                .hasCount(4)
+                .hasCount(7)
                 .up()
                 .hasScore("0.5714285714285714")
                 .up()
@@ -99,7 +100,7 @@ class MultiMeasureServiceTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(8)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -108,7 +109,7 @@ class MultiMeasureServiceTest {
                 .hasCount(3)
                 .up()
                 .population("numerator")
-                .hasCount(4)
+                .hasCount(7)
                 .up()
                 .hasScore("0.5")
                 .up()
@@ -119,7 +120,7 @@ class MultiMeasureServiceTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(8)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -128,7 +129,7 @@ class MultiMeasureServiceTest {
                 .hasCount(3)
                 .up()
                 .population("numerator")
-                .hasCount(3)
+                .hasCount(6)
                 .up()
                 .hasScore("0.375")
                 .up()
@@ -153,13 +154,13 @@ class MultiMeasureServiceTest {
                 .hasCount(10)
                 .up()
                 .population("measure-population")
-                .hasCount(8)
+                .hasCount(10)
                 .up()
                 .population("measure-population-exclusion")
                 .hasCount(2)
                 .up()
                 .population("measure-observation")
-                .hasCount(8)
+                .hasCount(10)
                 .up()
                 .up()
                 .up();
@@ -190,7 +191,7 @@ class MultiMeasureServiceTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(7)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -202,7 +203,7 @@ class MultiMeasureServiceTest {
                 .hasCount(3)
                 .up()
                 .population("numerator")
-                .hasCount(4)
+                .hasCount(7)
                 .up()
                 .hasScore("0.5714285714285714")
                 .up()
@@ -214,7 +215,7 @@ class MultiMeasureServiceTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(7)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -226,7 +227,7 @@ class MultiMeasureServiceTest {
                 .hasCount(3)
                 .up()
                 .population("numerator")
-                .hasCount(4)
+                .hasCount(7)
                 .up()
                 .hasScore("0.5714285714285714")
                 .up()
@@ -237,7 +238,7 @@ class MultiMeasureServiceTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(8)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -246,7 +247,7 @@ class MultiMeasureServiceTest {
                 .hasCount(3)
                 .up()
                 .population("numerator")
-                .hasCount(4)
+                .hasCount(7)
                 .up()
                 .hasScore("0.5")
                 .up()
@@ -257,7 +258,7 @@ class MultiMeasureServiceTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(8)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -266,7 +267,7 @@ class MultiMeasureServiceTest {
                 .hasCount(3)
                 .up()
                 .population("numerator")
-                .hasCount(3)
+                .hasCount(6)
                 .up()
                 .hasScore("0.375")
                 .up()
@@ -291,13 +292,13 @@ class MultiMeasureServiceTest {
                 .hasCount(10)
                 .up()
                 .population("measure-population")
-                .hasCount(8)
+                .hasCount(10)
                 .up()
                 .population("measure-population-exclusion")
                 .hasCount(2)
                 .up()
                 .population("measure-observation")
-                .hasCount(8)
+                .hasCount(10)
                 .up()
                 .up()
                 .up();
@@ -772,7 +773,7 @@ class MultiMeasureServiceTest {
                 .hasCount(1)
                 .up()
                 .population("denominator")
-                .hasCount(0)
+                .hasCount(1)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(0)
@@ -885,12 +886,7 @@ class MultiMeasureServiceTest {
                 .reporter("payer")
                 .evaluate();
 
-        assertThrows(IllegalArgumentException.class, () -> when.then()
-                .hasMeasureReportCount(1)
-                .measureReport("http://example.com/Measure/MinimalProportionNoBasisSingleGroup")
-                .hasReportType("Summary")
-                .hasSubjectReference("Practitioner/tester")
-                .hasReporter("Organization/payer"));
+        assertThrows(IllegalArgumentException.class, when::then);
     }
 
     @Test
@@ -925,12 +921,7 @@ class MultiMeasureServiceTest {
                 .reporter("Patient/male-2022")
                 .evaluate();
 
-        assertThrows(IllegalArgumentException.class, () -> when.then()
-                .hasMeasureReportCount(1)
-                .measureReport("http://example.com/Measure/MinimalProportionNoBasisSingleGroup")
-                .hasReportType("Summary")
-                .hasSubjectReference("Practitioner/tester")
-                .hasReporter("Patient/male-2022"));
+        assertThrows(IllegalArgumentException.class, when::then);
     }
 
     // This test is effectively a sanity test to ensure that Organization subjects

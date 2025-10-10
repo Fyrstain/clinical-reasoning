@@ -23,7 +23,8 @@ import org.opencds.cqf.fhir.utility.repository.ig.IgRepository;
  *      has correct status
  *      has period
  */
-public class MeasureReportTypeIndividualTest {
+@SuppressWarnings("squid:S2699")
+class MeasureReportTypeIndividualTest {
     private static final String CLASS_PATH = "org/opencds/cqf/fhir/cr/measure/r4";
     private static final Repository repository = new IgRepository(
             FhirContext.forR4Cached(),
@@ -60,7 +61,7 @@ public class MeasureReportTypeIndividualTest {
                 .hasCount(2)
                 .up()
                 .population("denominator")
-                .hasCount(1)
+                .hasCount(2)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(0)
@@ -99,7 +100,7 @@ public class MeasureReportTypeIndividualTest {
                 .hasCount(2)
                 .up()
                 .population("denominator")
-                .hasCount(1)
+                .hasCount(2)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(0)

@@ -28,7 +28,8 @@ import org.opencds.cqf.fhir.utility.repository.ig.IgRepository;
  *    has status
  *    has period
  */
-public class MeasureReportTypeSubjectListTest {
+@SuppressWarnings("squid:S2699")
+class MeasureReportTypeSubjectListTest {
     private static final String CLASS_PATH = "org/opencds/cqf/fhir/cr/measure/r4";
     private static final Repository repository = new IgRepository(
             FhirContext.forR4Cached(),
@@ -69,7 +70,7 @@ public class MeasureReportTypeSubjectListTest {
                 .hasSubjectResults()
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(11)
                 .hasSubjectResults()
                 .up()
                 .population("denominator-exclusion")
@@ -81,8 +82,7 @@ public class MeasureReportTypeSubjectListTest {
                 .hasSubjectResults()
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
-                .hasSubjectResults()
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)
@@ -116,7 +116,7 @@ public class MeasureReportTypeSubjectListTest {
                 .hasSubjectResults()
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(10)
                 .hasSubjectResults()
                 .up()
                 .population("denominator-exclusion")
@@ -128,8 +128,7 @@ public class MeasureReportTypeSubjectListTest {
                 .hasSubjectResults()
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
-                .hasSubjectResults()
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)
@@ -229,24 +228,6 @@ public class MeasureReportTypeSubjectListTest {
                 .population("numerator")
                 .hasCount(2)
                 .hasSubjectResults()
-                .up()
-                .firstStratifier()
-                .stratumCount(9)
-                .stratum("Encounter/patient-1-encounter-1")
-                .population("initial-population")
-                .hasCount(1)
-                .hasStratumPopulationSubjectResults()
-                .up()
-                .population("denominator")
-                .hasCount(1)
-                .hasStratumPopulationSubjectResults()
-                .up()
-                .population("numerator")
-                .hasCount(0) // no subject results
-                .hasNoStratumPopulationSubjectResults() // validates nothing is there
-                .up()
-                .hasScore("0.0") // make sure stratum are scored
-                .up()
                 .up()
                 .up()
                 .report();

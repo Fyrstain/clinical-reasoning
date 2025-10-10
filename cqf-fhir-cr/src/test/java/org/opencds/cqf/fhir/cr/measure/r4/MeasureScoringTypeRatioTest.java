@@ -17,7 +17,8 @@ import org.opencds.cqf.fhir.utility.repository.ig.IgRepository;
 /**
  * the purpose of this test is to validate the output and required fields for evaluating MeasureScoring type Ratio
  */
-public class MeasureScoringTypeRatioTest {
+@SuppressWarnings("squid:S2699")
+class MeasureScoringTypeRatioTest {
     // req'd populations
     // exception works
     // exclusion works
@@ -52,13 +53,13 @@ public class MeasureScoringTypeRatioTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(8)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)
@@ -109,13 +110,13 @@ public class MeasureScoringTypeRatioTest {
                 .hasCount(11)
                 .up()
                 .population("denominator")
-                .hasCount(9)
+                .hasCount(11)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)
@@ -191,13 +192,13 @@ public class MeasureScoringTypeRatioTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(8)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)

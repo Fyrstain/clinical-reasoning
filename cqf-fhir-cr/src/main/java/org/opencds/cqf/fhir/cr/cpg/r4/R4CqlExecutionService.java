@@ -28,6 +28,7 @@ public class R4CqlExecutionService {
         this.evaluationSettings = evaluationSettings;
     }
 
+    // should use adapters to make this version agnostic
     public Parameters evaluate(
             // RequestDetails requestDetails,
             String subject,
@@ -70,6 +71,7 @@ public class R4CqlExecutionService {
                 return (Parameters) libraryEngine.evaluateExpression(
                         expression,
                         parameters == null ? new Parameters() : parameters,
+                        null,
                         subject,
                         libraries,
                         data,
@@ -85,6 +87,7 @@ public class R4CqlExecutionService {
                     libraryIdentifier,
                     subject,
                     parameters,
+                    null,
                     data,
                     null,
                     expression == null ? null : Collections.singleton(expression));

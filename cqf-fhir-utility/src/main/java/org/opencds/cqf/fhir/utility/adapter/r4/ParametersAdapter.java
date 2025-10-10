@@ -10,8 +10,11 @@ import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.Type;
 import org.opencds.cqf.fhir.utility.adapter.IParametersAdapter;
+import org.opencds.cqf.fhir.utility.adapter.IParametersParameterComponentAdapter;
 
 class ParametersAdapter extends ResourceAdapter implements IParametersAdapter {
+
+    private final Parameters parameters;
 
     public ParametersAdapter(IBaseResource parameters) {
         super(parameters);
@@ -23,16 +26,20 @@ class ParametersAdapter extends ResourceAdapter implements IParametersAdapter {
         this.parameters = (Parameters) parameters;
     }
 
-    private Parameters parameters;
-
     protected Parameters getParameters() {
         return this.parameters;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public List<ParametersParameterComponent> getParameter() {
-        return this.getParameters().getParameter();
+    public boolean hasParameter() {
+        return parameters.hasParameter();
+    }
+
+    @Override
+    public List<IParametersParameterComponentAdapter> getParameter() {
+        return this.getParameters().getParameter().stream()
+                .map(adapterFactory::createParametersParameter)
+                .toList();
     }
 
     @SuppressWarnings("unchecked")
@@ -42,8 +49,14 @@ class ParametersAdapter extends ResourceAdapter implements IParametersAdapter {
     }
 
     @Override
-    public ParametersParameterComponent getParameter(String name) {
-        return this.getParameters().getParameter(name);
+    public boolean hasParameter(String name) {
+        return parameters.hasParameter(name);
+    }
+
+    @Override
+    public IParametersParameterComponentAdapter getParameter(String name) {
+        var param = getParameters().getParameter(name);
+        return param == null ? null : adapterFactory.createParametersParameter(param);
     }
 
     @Override
@@ -52,6 +65,11 @@ class ParametersAdapter extends ResourceAdapter implements IParametersAdapter {
                 .setParameter(parametersParameterComponents.stream()
                         .map(x -> (ParametersParameterComponent) x)
                         .collect(Collectors.toList()));
+    }
+
+    @Override
+    public void addParameter(String name, String value) {
+        getParameters().addParameter(name, value);
     }
 
     @Override

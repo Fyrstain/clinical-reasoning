@@ -16,7 +16,7 @@
       "instantiatesCanonical": [
         "http://fhir.org/guides/cdc/opioid-cds/PlanDefinition/opioidcds-10-patient-view|2022.1.0"
       ],
-      "status": "draft",
+      "status": "active",
       "intent": "proposal",
       "subject": {
         "reference": "Patient/example-rec-10-patient-view-POS-Cocaine-drugs"
@@ -89,7 +89,7 @@
             ]
           },
           "resource": {
-            "reference": "ServiceRequest/opioidcds-urine-screening-request"
+            "reference": "#opioidcds-urine-screening-request"
           },
           "action": [
             {
@@ -111,7 +111,7 @@
       "instantiatesCanonical": [
         "http://fhir.org/guides/cdc/opioid-cds/ActivityDefinition/opioidcds-urine-screening-request|2022.1.0"
       ],
-      "status": "draft",
+      "status": "active",
       "intent": "order",
       "priority": "urgent",
       "code": {
@@ -153,7 +153,7 @@
   "instantiatesCanonical": [
     "http://fhir.org/guides/cdc/opioid-cds/PlanDefinition/opioidcds-10-patient-view|2022.1.0"
   ],
-  "status": "draft",
+  "status": "active",
   "intent": "proposal",
   "subject": {
     "reference": "Patient/example-rec-10-patient-view-POS-Cocaine-drugs"
@@ -164,7 +164,7 @@
   "activity": [
     {
       "reference": {
-        "reference": "#RequestGroup/opioidcds-10-patient-view"
+        "reference": "#opioidcds-10-patient-view"
       }
     }
   ]

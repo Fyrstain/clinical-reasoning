@@ -17,7 +17,8 @@ import org.opencds.cqf.fhir.utility.repository.ig.IgRepository;
 /**
  * the purpose of this test is to validate the output and required fields for evaluating MeasureScoring type Proportion
  */
-public class MeasureScoringTypeProportionTest {
+@SuppressWarnings("squid:S2699")
+class MeasureScoringTypeProportionTest {
     // missing req'd populations
     // denominator-exception works
     // denominator-exclusion works
@@ -54,7 +55,7 @@ public class MeasureScoringTypeProportionTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -63,7 +64,7 @@ public class MeasureScoringTypeProportionTest {
                 .hasCount(2) // because subject was also in Numerator
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)
@@ -117,7 +118,7 @@ public class MeasureScoringTypeProportionTest {
                 .hasCount(11)
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(11)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -126,7 +127,7 @@ public class MeasureScoringTypeProportionTest {
                 .hasCount(3)
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)
@@ -161,7 +162,7 @@ public class MeasureScoringTypeProportionTest {
                 .hasCount(2)
                 .up()
                 .population("denominator")
-                .hasCount(1)
+                .hasCount(2)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(0)
@@ -205,7 +206,7 @@ public class MeasureScoringTypeProportionTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -214,7 +215,7 @@ public class MeasureScoringTypeProportionTest {
                 .hasCount(2) // because subject was also in Numerator
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)

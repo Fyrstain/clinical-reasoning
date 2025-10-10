@@ -2,13 +2,16 @@ package org.opencds.cqf.fhir.utility.adapter.dstu3;
 
 import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.hl7.fhir.dstu3.model.Attachment;
 import org.hl7.fhir.dstu3.model.CodeableConcept;
 import org.hl7.fhir.dstu3.model.Coding;
 import org.hl7.fhir.dstu3.model.DataRequirement;
+import org.hl7.fhir.dstu3.model.DataRequirement.DataRequirementCodeFilterComponent;
 import org.hl7.fhir.dstu3.model.Library;
 import org.hl7.fhir.dstu3.model.ParameterDefinition;
 import org.hl7.fhir.dstu3.model.Parameters;
@@ -21,8 +24,10 @@ import org.hl7.fhir.instance.model.api.IBaseParameters;
 import org.hl7.fhir.instance.model.api.ICompositeType;
 import org.hl7.fhir.instance.model.api.IDomainResource;
 import org.hl7.fhir.instance.model.api.IPrimitiveType;
+import org.opencds.cqf.fhir.api.Repository;
 import org.opencds.cqf.fhir.utility.Constants;
 import org.opencds.cqf.fhir.utility.adapter.DependencyInfo;
+import org.opencds.cqf.fhir.utility.adapter.IDataRequirementAdapter;
 import org.opencds.cqf.fhir.utility.adapter.IDependencyInfo;
 import org.opencds.cqf.fhir.utility.adapter.ILibraryAdapter;
 
@@ -60,7 +65,7 @@ public class LibraryAdapter extends KnowledgeArtifactAdapter implements ILibrary
     @SuppressWarnings("unchecked")
     @Override
     public List<Attachment> getContent() {
-        return getLibrary().getContent().stream().collect(Collectors.toList());
+        return getLibrary().getContent().stream().toList();
     }
 
     @Override
@@ -84,16 +89,16 @@ public class LibraryAdapter extends KnowledgeArtifactAdapter implements ILibrary
         // relatedArtifact[].resource
         getRelatedArtifact().stream()
                 .map(ra -> (RelatedArtifact) ra)
-                .filter(ra -> ra.hasResource())
+                .filter(RelatedArtifact::hasResource)
                 .map(ra -> DependencyInfo.convertRelatedArtifact(ra, referenceSource))
                 .forEach(references::add);
-        getLibrary().getDataRequirement().stream().forEach(dr -> {
+        getLibrary().getDataRequirement().forEach(dr -> {
             dr.getProfile().stream()
                     .filter(IPrimitiveType::hasValue)
                     .forEach(profile -> references.add(new DependencyInfo(
                             referenceSource, profile.getValue(), profile.getExtension(), profile::setValue)));
             dr.getCodeFilter().stream()
-                    .filter(cf -> cf.hasValueSet())
+                    .filter(DataRequirementCodeFilterComponent::hasValueSet)
                     .forEach(cf -> references.add(new DependencyInfo(
                             referenceSource,
                             cf.getValueSetReference().getReference(),
@@ -101,6 +106,20 @@ public class LibraryAdapter extends KnowledgeArtifactAdapter implements ILibrary
                             reference -> cf.getValueSetReference().setReference(reference))));
         });
         return references;
+    }
+
+    @Override
+    public Map<String, String> getReferencedLibraries() {
+        var map = new HashMap<String, String>();
+        map.put(getName(), getCanonical());
+        return map;
+    }
+
+    @Override
+    public Map<String, ILibraryAdapter> retrieveReferencedLibraries(Repository repository) {
+        var map = new HashMap<String, ILibraryAdapter>();
+        map.put(getName(), this);
+        return map;
     }
 
     @SuppressWarnings("unchecked")
@@ -131,10 +150,16 @@ public class LibraryAdapter extends KnowledgeArtifactAdapter implements ILibrary
         return getLibrary().getParameter();
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public List<DataRequirement> getDataRequirement() {
-        return getLibrary().getDataRequirement();
+    public boolean hasDataRequirement() {
+        return getLibrary().hasDataRequirement();
+    }
+
+    @Override
+    public List<IDataRequirementAdapter> getDataRequirement() {
+        return getLibrary().getDataRequirement().stream()
+                .map(DataRequirementAdapter::new)
+                .collect(Collectors.toUnmodifiableList());
     }
 
     @Override
@@ -168,8 +193,9 @@ public class LibraryAdapter extends KnowledgeArtifactAdapter implements ILibrary
                         return getLibrary().getContained().stream()
                                 .filter(containedResource ->
                                         containedResource.getId().equals(ref))
+                                .filter(IBaseParameters.class::isInstance)
+                                .map(IBaseParameters.class::cast)
                                 .findFirst()
-                                .map(r -> (IBaseParameters) r)
                                 .orElse(null);
                     }
                     return null;

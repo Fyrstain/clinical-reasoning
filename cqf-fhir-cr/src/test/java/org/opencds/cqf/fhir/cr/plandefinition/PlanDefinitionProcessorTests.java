@@ -1,15 +1,22 @@
 package org.opencds.cqf.fhir.cr.plandefinition;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.opencds.cqf.fhir.cr.plandefinition.PlanDefinition.CLASS_PATH;
-import static org.opencds.cqf.fhir.cr.plandefinition.PlanDefinition.given;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.opencds.cqf.fhir.cr.plandefinition.TestPlanDefinition.CLASS_PATH;
+import static org.opencds.cqf.fhir.cr.plandefinition.TestPlanDefinition.given;
 import static org.opencds.cqf.fhir.test.Resources.getResourcePath;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import java.nio.file.Paths;
+import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.r4.model.QuestionnaireResponse;
 import org.junit.jupiter.api.Test;
 import org.opencds.cqf.fhir.cql.EvaluationSettings;
 import org.opencds.cqf.fhir.cr.activitydefinition.apply.IRequestResolverFactory;
@@ -22,6 +29,7 @@ import org.opencds.cqf.fhir.utility.model.FhirModelResolverCache;
 import org.opencds.cqf.fhir.utility.monad.Eithers;
 import org.opencds.cqf.fhir.utility.repository.ig.IgRepository;
 
+@SuppressWarnings("squid:S2699")
 class PlanDefinitionProcessorTests {
     private final FhirContext fhirContextDstu3 = FhirContext.forDstu3Cached();
     private final FhirContext fhirContextR4 = FhirContext.forR4Cached();
@@ -70,13 +78,9 @@ class PlanDefinitionProcessorTests {
 
     @Test
     void applyNoSubjectThrowsException() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            var planDefinitionID = "hello-world-patient-view";
-            given().repositoryFor(fhirContextR4, "r4")
-                    .when()
-                    .planDefinitionId(planDefinitionID)
-                    .thenApply();
-        });
+        var planDefinitionID = "hello-world-patient-view";
+        var when = given().repositoryFor(fhirContextR4, "r4").when().planDefinitionId(planDefinitionID);
+        assertThrows(IllegalArgumentException.class, when::thenApply);
     }
 
     @Test
@@ -340,6 +344,30 @@ class PlanDefinitionProcessorTests {
     }
 
     @Test
+    void nestedActivity() {
+        var planDefinitionID = "NestedActivity";
+        var patientID = "Patient/Patient1";
+        var practitionerID = "Practitioner/Practitioner1";
+        var data = "r4/tests/Bundle-DischargeInstructions-Patient-Data.json";
+        given().repositoryFor(fhirContextR4, "r4")
+                .when()
+                .planDefinitionId(planDefinitionID)
+                .subjectId(patientID)
+                .practitionerId(practitionerID)
+                .additionalData(data)
+                .thenApply()
+                .hasCommunicationRequestPayload();
+        given().repositoryFor(fhirContextR4, "r4")
+                .when()
+                .planDefinitionId(planDefinitionID)
+                .subjectId(patientID)
+                .practitionerId(practitionerID)
+                .additionalData(data)
+                .thenApplyR5()
+                .hasCommunicationRequestPayload();
+    }
+
+    @Test
     void questionnaireTask() {
         var planDefinitionID = "prepopulate";
         var patientID = "OPA-Patient1";
@@ -355,76 +383,39 @@ class PlanDefinitionProcessorTests {
     }
 
     @Test
-    void questionnaireResponseR4() {
-        // The content this test is using was intended for an old implementation of a custom prepopulate step that is no
-        // longer used.  The content still works to test $extract but no Questionnaire is returned as originally
-        // expected.
-        var planDefinitionID = "prepopulate";
-        var patientID = "OPA-Patient1";
-        var dataId = new org.hl7.fhir.r4.model.IdType(
-                "QuestionnaireResponse", "OutpatientPriorAuthorizationRequest-OPA-Patient1");
-        var parameters = org.opencds.cqf.fhir.utility.r4.Parameters.parameters(
-                org.opencds.cqf.fhir.utility.r4.Parameters.stringPart("ClaimId", "OPA-Claim1"));
-        given().repositoryFor(fhirContextR4, "r4")
-                .when()
-                .planDefinitionId(planDefinitionID)
-                .subjectId(patientID)
-                .additionalDataId(dataId)
-                .parameters(parameters)
-                .thenApply()
-                .hasContained(2);
-        given().repositoryFor(fhirContextR4, "r4")
-                .when()
-                .planDefinitionId(planDefinitionID)
-                .subjectId(patientID)
-                .additionalDataId(dataId)
-                .parameters(parameters)
-                .thenApplyR5()
-                .hasEntry(2);
-    }
-
-    @Test
-    void questionnaireResponseR5() {
-        // The content this test is using was intended for an old implementation of a custom prepopulate step that is no
-        // longer used.  The content still works to test $extract but no Questionnaire is returned as originally
-        // expected.
-        var planDefinitionID = "prepopulate";
-        var patientID = "OPA-Patient1";
-        var data = "r5/extract-questionnaireresponse/patient-data.json";
-        var content = "r5/prepopulate/prepopulate-content-bundle.json";
-        var parameters = org.opencds.cqf.fhir.utility.r5.Parameters.parameters(
-                org.opencds.cqf.fhir.utility.r5.Parameters.stringPart("ClaimId", "OPA-Claim1"));
-        given().repositoryFor(fhirContextR5, "r5")
-                .when()
-                .planDefinitionId(planDefinitionID)
-                .subjectId(patientID)
-                .additionalData(data)
-                .content(content)
-                .parameters(parameters)
-                .thenApplyR5()
-                .hasEntry(2);
-    }
-
-    @Test
     void generateQuestionnaireR4() {
         var planDefinitionID = "generate-questionnaire";
         var patientID = "OPA-Patient1";
         var parameters = org.opencds.cqf.fhir.utility.r4.Parameters.parameters(
                 org.opencds.cqf.fhir.utility.r4.Parameters.stringPart("ClaimId", "OPA-Claim1"));
-        given().repositoryFor(fhirContextR4, "r4")
+        var questionnaireResponse = (QuestionnaireResponse) given().repositoryFor(fhirContextR4, "r4")
                 .when()
                 .planDefinitionId(planDefinitionID)
                 .subjectId(patientID)
                 .parameters(parameters)
                 .thenApplyR5()
-                .hasEntry(3)
+                .hasEntry(4)
                 .hasQuestionnaire()
+                .hasQuestionnaireResponse()
                 .hasQuestionnaireResponseItemValue("1.1", "Claim/OPA-Claim1")
                 .hasQuestionnaireResponseItemValue("2.1", "Acme Clinic")
-                .hasQuestionnaireResponseItemValue("2.2.2", "1407071236")
-                .hasQuestionnaireResponseItemValue("3.4.2", "12345")
-                .hasQuestionnaireResponseItemValue("4.1.2", "1245319599")
-                .hasQuestionnaireResponseItemValue("4.2.2", "456789");
+                .hasQuestionnaireResponseItemValue("2.2.1", "1407071236")
+                .hasQuestionnaireResponseItemValue("3.4.1", "12345")
+                .hasQuestionnaireResponseItemValue("4.1.1", "1245319599")
+                .hasQuestionnaireResponseItemValue("4.2.1", "456789")
+                .questionnaireResponse;
+        var bundle = new Bundle().addEntry(new BundleEntryComponent().setResource(questionnaireResponse));
+        bundle.setIdElement(new IdType().setValue("bundle").withResourceType("Bundle"));
+        given().repositoryFor(fhirContextR4, "r4")
+                .when()
+                .planDefinitionId(planDefinitionID)
+                .subjectId(patientID)
+                .parameters(parameters)
+                .additionalData(bundle)
+                .thenApplyR5()
+                .hasEntry(4)
+                .hasQuestionnaire()
+                .hasQuestionnaireResponse();
     }
 
     @Test
@@ -435,14 +426,39 @@ class PlanDefinitionProcessorTests {
                 org.opencds.cqf.fhir.utility.r4.Parameters.stringPart("Service Request Id", "SleepStudy"),
                 org.opencds.cqf.fhir.utility.r4.Parameters.stringPart("Service Request Id", "SleepStudy2"),
                 org.opencds.cqf.fhir.utility.r4.Parameters.stringPart("Coverage Id", "Coverage-positive"));
-        given().repositoryFor(fhirContextR4, "r4/pa-aslp")
+        var questionnaireResponse = (QuestionnaireResponse) given().repositoryFor(fhirContextR4, "r4/pa-aslp")
                 .when()
                 .planDefinitionId(planDefinitionID)
                 .subjectId(patientID)
                 .parameters(parameters)
                 .thenApplyR5()
-                .hasEntry(2)
-                .hasQuestionnaire();
+                .hasEntry(3)
+                .hasQuestionnaire()
+                .hasQuestionnaireResponse()
+                .questionnaireResponse;
+        // First response Item is correct
+        var responseItem1 = questionnaireResponse.getItem().get(0);
+        assertNotNull(responseItem1);
+        assertEquals("Input Text Test", responseItem1.getText());
+        assertTrue(responseItem1.getItem().get(0).hasAnswer());
+        // First response Item has first child item with answer
+        var codingItem1 =
+                (Coding) responseItem1.getItem().get(0).getAnswerFirstRep().getValue();
+        assertEquals("ASLP.A1.DE14", codingItem1.getCode());
+        // First response Item has second child item with answer
+        assertTrue(responseItem1.getItem().get(1).hasAnswer());
+
+        assertEquals(2, questionnaireResponse.getItem().size());
+        // Second response Item is correct
+        var responseItem2 = questionnaireResponse.getItem().get(1);
+        assertEquals("Input Text Test", responseItem2.getText());
+        assertTrue(responseItem2.getItem().get(0).hasAnswer());
+        // Second response Item has first child item with answer
+        var codingItem2 =
+                (Coding) responseItem2.getItem().get(0).getAnswerFirstRep().getValue();
+        assertEquals("ASLP.A1.DE2", codingItem2.getCode());
+        // Second response Item has second child item with answer
+        assertTrue(responseItem2.getItem().get(1).hasAnswer());
     }
 
     @Test
@@ -457,8 +473,9 @@ class PlanDefinitionProcessorTests {
                 .subjectId(patientID)
                 .parameters(parameters)
                 .thenApplyR5()
-                .hasEntry(3)
-                .hasQuestionnaire();
+                .hasEntry(4)
+                .hasQuestionnaire()
+                .hasQuestionnaireResponse();
     }
 
     @Test

@@ -1,12 +1,12 @@
 package org.opencds.cqf.fhir.cr.plandefinition;
 
 import static java.util.Objects.requireNonNull;
-import static org.opencds.cqf.fhir.utility.Parameters.newBooleanPart;
-import static org.opencds.cqf.fhir.utility.Parameters.newParameters;
+import static org.opencds.cqf.fhir.utility.PackageHelper.packageParameters;
 import static org.opencds.cqf.fhir.utility.repository.Repositories.createRestRepository;
 import static org.opencds.cqf.fhir.utility.repository.Repositories.proxy;
 
 import ca.uhn.fhir.context.FhirVersionEnum;
+import jakarta.annotation.Nonnull;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.instance.model.api.IBaseBackboneElement;
@@ -30,6 +30,8 @@ import org.opencds.cqf.fhir.cr.plandefinition.apply.ApplyProcessor;
 import org.opencds.cqf.fhir.cr.plandefinition.apply.ApplyRequest;
 import org.opencds.cqf.fhir.cr.plandefinition.apply.IApplyProcessor;
 import org.opencds.cqf.fhir.utility.Ids;
+import org.opencds.cqf.fhir.utility.Resources;
+import org.opencds.cqf.fhir.utility.adapter.IAdapterFactory;
 import org.opencds.cqf.fhir.utility.model.FhirModelResolverCache;
 import org.opencds.cqf.fhir.utility.monad.Either3;
 
@@ -101,12 +103,7 @@ public class PlanDefinitionProcessor {
 
     public <C extends IPrimitiveType<String>, R extends IBaseResource> IBaseBundle packagePlanDefinition(
             Either3<C, IIdType, R> planDefinition, boolean isPut) {
-        return packagePlanDefinition(
-                planDefinition,
-                newParameters(
-                        repository.fhirContext(),
-                        "package-parameters",
-                        newBooleanPart(repository.fhirContext(), "isPut", isPut)));
+        return packagePlanDefinition(planDefinition, packageParameters(fhirVersion, null, isPut));
     }
 
     public <C extends IPrimitiveType<String>, R extends IBaseResource> IBaseBundle packagePlanDefinition(
@@ -132,8 +129,8 @@ public class PlanDefinitionProcessor {
     }
 
     protected <C extends IPrimitiveType<String>, R extends IBaseResource> ApplyRequest buildApplyRequest(
-            Either3<C, IIdType, R> planDefinition,
-            String subject,
+            @Nonnull Either3<C, IIdType, R> planDefinition,
+            @Nonnull String subject,
             String encounter,
             String practitioner,
             String organization,
@@ -143,7 +140,6 @@ public class PlanDefinitionProcessor {
             IBaseDatatype setting,
             IBaseDatatype settingContext,
             IBaseParameters parameters,
-            boolean useServerData,
             IBaseBundle data,
             List<? extends IBaseBackboneElement> prefetchData,
             LibraryEngine libraryEngine) {
@@ -162,7 +158,6 @@ public class PlanDefinitionProcessor {
                 setting,
                 settingContext,
                 parameters,
-                useServerData,
                 data,
                 prefetchData,
                 libraryEngine,
@@ -193,7 +188,6 @@ public class PlanDefinitionProcessor {
                 setting,
                 settingContext,
                 null,
-                true,
                 null,
                 null,
                 new LibraryEngine(repository, evaluationSettings));
@@ -268,7 +262,6 @@ public class PlanDefinitionProcessor {
                 setting,
                 settingContext,
                 parameters,
-                useServerData,
                 data,
                 prefetchData,
                 new LibraryEngine(repository, this.evaluationSettings));
@@ -286,14 +279,13 @@ public class PlanDefinitionProcessor {
             IBaseDatatype setting,
             IBaseDatatype settingContext,
             IBaseParameters parameters,
-            boolean useServerData,
             IBaseBundle data,
             List<? extends IBaseBackboneElement> prefetchData,
             LibraryEngine libraryEngine) {
         if (fhirVersion == FhirVersionEnum.R5) {
             return applyR5(
                     planDefinition,
-                    subject,
+                    List.of(subject),
                     encounter,
                     practitioner,
                     organization,
@@ -303,7 +295,6 @@ public class PlanDefinitionProcessor {
                     setting,
                     settingContext,
                     parameters,
-                    useServerData,
                     data,
                     prefetchData,
                     libraryEngine);
@@ -320,7 +311,6 @@ public class PlanDefinitionProcessor {
                 setting,
                 settingContext,
                 parameters,
-                useServerData,
                 data,
                 prefetchData,
                 libraryEngine));
@@ -331,9 +321,9 @@ public class PlanDefinitionProcessor {
         return applyProcessor.apply(request);
     }
 
-    public <C extends IPrimitiveType<String>, R extends IBaseResource> IBaseBundle applyR5(
+    public <C extends IPrimitiveType<String>, R extends IBaseResource> IBaseParameters applyR5(
             Either3<C, IIdType, R> planDefinition,
-            String subject,
+            List<String> subject,
             String encounter,
             String practitioner,
             String organization,
@@ -369,9 +359,9 @@ public class PlanDefinitionProcessor {
                 createRestRepository(repository.fhirContext(), terminologyEndpoint));
     }
 
-    public <C extends IPrimitiveType<String>, R extends IBaseResource> IBaseBundle applyR5(
+    public <C extends IPrimitiveType<String>, R extends IBaseResource> IBaseParameters applyR5(
             Either3<C, IIdType, R> planDefinition,
-            String subject,
+            List<String> subject,
             String encounter,
             String practitioner,
             String organization,
@@ -400,15 +390,14 @@ public class PlanDefinitionProcessor {
                 setting,
                 settingContext,
                 parameters,
-                useServerData,
                 data,
                 prefetchData,
                 new LibraryEngine(repository, this.evaluationSettings));
     }
 
-    public <C extends IPrimitiveType<String>, R extends IBaseResource> IBaseBundle applyR5(
+    public <C extends IPrimitiveType<String>, R extends IBaseResource> IBaseParameters applyR5(
             Either3<C, IIdType, R> planDefinition,
-            String subject,
+            List<String> subject,
             String encounter,
             String practitioner,
             String organization,
@@ -418,26 +407,31 @@ public class PlanDefinitionProcessor {
             IBaseDatatype setting,
             IBaseDatatype settingContext,
             IBaseParameters parameters,
-            boolean useServerData,
             IBaseBundle data,
             List<? extends IBaseBackboneElement> prefetchData,
             LibraryEngine libraryEngine) {
-        return applyR5(buildApplyRequest(
-                planDefinition,
-                subject,
-                encounter,
-                practitioner,
-                organization,
-                userType,
-                userLanguage,
-                userTaskContext,
-                setting,
-                settingContext,
-                parameters,
-                useServerData,
-                data,
-                prefetchData,
-                libraryEngine));
+        var param = IAdapterFactory.forFhirVersion(fhirVersion)
+                .createParameters((IBaseParameters) Resources.newBaseForVersion("Parameters", fhirVersion));
+        subject.forEach(s -> {
+            param.addParameter(
+                    "return",
+                    applyR5(buildApplyRequest(
+                            planDefinition,
+                            s,
+                            encounter,
+                            practitioner,
+                            organization,
+                            userType,
+                            userLanguage,
+                            userTaskContext,
+                            setting,
+                            settingContext,
+                            parameters,
+                            data,
+                            prefetchData,
+                            libraryEngine)));
+        });
+        return (IBaseParameters) param.get();
     }
 
     public IBaseBundle applyR5(ApplyRequest request) {

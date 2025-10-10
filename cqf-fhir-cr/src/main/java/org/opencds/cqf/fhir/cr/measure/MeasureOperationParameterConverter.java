@@ -3,7 +3,6 @@ package org.opencds.cqf.fhir.cr.measure;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.stream.Collectors;
 import org.hl7.fhir.instance.model.api.IBaseDatatype;
 import org.hl7.fhir.instance.model.api.IBaseParameters;
 import org.hl7.fhir.instance.model.api.ICompositeType;
@@ -56,14 +55,12 @@ public class MeasureOperationParameterConverter {
 
     protected void addChild(IBaseParameters parameters, String name, IBaseDatatype value) {
         IParametersAdapter parametersAdapter = this.adapterFactory.createParameters(parameters);
-        List<IParametersParameterComponentAdapter> parts = parametersAdapter.getParameter().stream()
-                .map(x -> this.adapterFactory.createParametersParameters(x))
-                .collect(Collectors.toList());
+        List<IParametersParameterComponentAdapter> parts = parametersAdapter.getParameter();
 
         IParametersParameterComponentAdapter part =
                 parts.stream().filter(x -> x.getName().equals(name)).findFirst().orElse(null);
         if (part == null) {
-            part = this.adapterFactory.createParametersParameters(parametersAdapter.addParameter());
+            part = this.adapterFactory.createParametersParameter(parametersAdapter.addParameter());
         }
 
         part.setName(name);

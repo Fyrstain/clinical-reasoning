@@ -3,6 +3,7 @@ package org.opencds.cqf.fhir.cql.engine.retrieve;
 import static java.util.Objects.requireNonNull;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.fhirpath.IFhirPath;
 import ca.uhn.fhir.model.api.IQueryParameterType;
 import ca.uhn.fhir.model.primitive.IdDt;
@@ -13,6 +14,7 @@ import ca.uhn.fhir.rest.param.ParamPrefixEnum;
 import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import ca.uhn.fhir.rest.param.TokenParamModifier;
+import ca.uhn.fhir.rest.param.UriParam;
 import ca.uhn.fhir.util.ExtensionUtil;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,6 +46,7 @@ import org.slf4j.LoggerFactory;
 
 public abstract class BaseRetrieveProvider implements RetrieveProvider {
     private static final Logger logger = LoggerFactory.getLogger(BaseRetrieveProvider.class);
+    private final FhirVersionEnum fhirVersion;
     private final CodeExtractor codeUtil;
     private final IFhirPath fhirPath;
     private final RetrieveSettings retrieveSettings;
@@ -55,6 +58,7 @@ public abstract class BaseRetrieveProvider implements RetrieveProvider {
             final TerminologyProvider terminologyProvider,
             final RetrieveSettings retrieveSettings) {
         requireNonNull(fhirContext, "fhirContext can not be null.");
+        fhirVersion = fhirContext.getVersion().getVersion();
         this.retrieveSettings = requireNonNull(retrieveSettings, "retrieveSettings can not be null");
         this.terminologyProvider = requireNonNull(terminologyProvider, "terminologyProvider can not be null");
         this.codeUtil = new CodeExtractor(fhirContext);
@@ -296,13 +300,14 @@ public abstract class BaseRetrieveProvider implements RetrieveProvider {
     }
 
     public void populateTemplateSearchParams(
-            Map<String, List<IQueryParameterType>> searchParams, final String templateId) {
-
-        // TODO: If profile mode is optional, trust, or enforced AND the repository
-        // supports the _profile
-        // parameter, we should add it.
-        if (this.getRetrieveSettings().getProfileMode() != PROFILE_MODE.OFF && StringUtils.isNotBlank(templateId)) {
-            searchParams.put("_profile", Collections.singletonList(new ReferenceParam(templateId)));
+            Map<String, List<IQueryParameterType>> searchParams, final String dataType, final String templateId) {
+        if (getRetrieveSettings().getProfileMode() != PROFILE_MODE.OFF
+                && StringUtils.isNotBlank(templateId)
+                && !templateId.startsWith(String.format("http://hl7.org/fhir/StructureDefinition/%s", dataType))) {
+            var profileParam = getFhirVersion().isOlderThan(FhirVersionEnum.R5)
+                    ? new UriParam(templateId)
+                    : new ReferenceParam(templateId);
+            searchParams.put("_profile", Collections.singletonList(profileParam));
         }
     }
 
@@ -440,6 +445,10 @@ public abstract class BaseRetrieveProvider implements RetrieveProvider {
         } else {
             throw new IllegalStateException("A date path must be provided when filtering using date parameters");
         }
+    }
+
+    protected FhirVersionEnum getFhirVersion() {
+        return fhirVersion;
     }
 
     protected CodeExtractor getCodeUtil() {

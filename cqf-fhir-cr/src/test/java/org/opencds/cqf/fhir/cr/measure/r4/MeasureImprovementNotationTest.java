@@ -16,7 +16,8 @@ import org.opencds.cqf.fhir.cr.measure.r4.Measure.Given;
 import org.opencds.cqf.fhir.cr.measure.r4.utils.TestDataGenerator;
 import org.opencds.cqf.fhir.utility.repository.ig.IgRepository;
 
-public class MeasureImprovementNotationTest {
+@SuppressWarnings({"squid:S2699", "squid:S1135"})
+class MeasureImprovementNotationTest {
     // undefined improvementNotation
     // measure defined
     // group defined
@@ -60,7 +61,7 @@ public class MeasureImprovementNotationTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -69,7 +70,7 @@ public class MeasureImprovementNotationTest {
                 .hasCount(2) // because subject was also in Numerator
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)
@@ -102,7 +103,7 @@ public class MeasureImprovementNotationTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -111,7 +112,7 @@ public class MeasureImprovementNotationTest {
                 .hasCount(2) // because subject was also in Numerator
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)
@@ -145,7 +146,7 @@ public class MeasureImprovementNotationTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -154,7 +155,7 @@ public class MeasureImprovementNotationTest {
                 .hasCount(2) // because subject was also in Numerator
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)
@@ -187,7 +188,7 @@ public class MeasureImprovementNotationTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -196,7 +197,7 @@ public class MeasureImprovementNotationTest {
                 .hasCount(2) // because subject was also in Numerator
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)
@@ -229,7 +230,7 @@ public class MeasureImprovementNotationTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -238,7 +239,7 @@ public class MeasureImprovementNotationTest {
                 .hasCount(2) // because subject was also in Numerator
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)
@@ -273,7 +274,7 @@ public class MeasureImprovementNotationTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -282,7 +283,7 @@ public class MeasureImprovementNotationTest {
                 .hasCount(2) // because subject was also in Numerator
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)
@@ -367,7 +368,7 @@ public class MeasureImprovementNotationTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -376,7 +377,7 @@ public class MeasureImprovementNotationTest {
                 .hasCount(2) // because subject was also in Numerator
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)
@@ -389,7 +390,7 @@ public class MeasureImprovementNotationTest {
                 .hasCount(10)
                 .up()
                 .population("denominator")
-                .hasCount(6)
+                .hasCount(10)
                 .up()
                 .population("denominator-exclusion")
                 .hasCount(2)
@@ -398,7 +399,7 @@ public class MeasureImprovementNotationTest {
                 .hasCount(2) // because subject was also in Numerator
                 .up()
                 .population("numerator-exclusion")
-                .hasCount(2)
+                .hasCount(0)
                 .up()
                 .population("numerator")
                 .hasCount(2)

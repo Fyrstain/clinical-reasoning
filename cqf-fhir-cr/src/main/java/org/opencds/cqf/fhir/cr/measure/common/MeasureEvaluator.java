@@ -307,7 +307,7 @@ public class MeasureEvaluator {
             context.getState().setContextValue(subjectTypePart, subjectIdPart);
             try {
                 EvaluationResult result = libraryEngine.getEvaluationResult(
-                        id, subjectId, null, null, null, null, zonedDateTime, context);
+                        id, subjectId, null, null, null, null, null, zonedDateTime, context);
                 evaluateSubject(measureDef, subjectTypePart, subjectIdPart, subjectSize, type, result);
             } catch (Exception e) {
                 // Catch Exceptions from evaluation per subject, but allow rest of subjects to be processed (if
@@ -384,8 +384,8 @@ public class MeasureEvaluator {
             if (!isBooleanBasis) {
                 // subject based observations don't have a parameter to pass in
                 context.getState()
-                        .push(new Variable()
-                                .withName(((FunctionDef) ed).getOperand().get(0).getName())
+                        .push(new Variable(
+                                        ((FunctionDef) ed).getOperand().get(0).getName())
                                 .withValue(resource));
             }
             result = context.getEvaluationVisitor().visitExpression(ed.getExpression(), context.getState());
@@ -408,6 +408,9 @@ public class MeasureEvaluator {
         for (Object resource : evaluatePopulationCriteria(
                 subjectType, matchingResult, evaluationResult, inclusionDef.getEvaluatedResources())) {
             inclusionDef.addResource(resource);
+            // hashmap instead of set
+            inclusionDef.addResource(subjectId, resource);
+
             i++;
         }
         // If SubjectId Added Resources to Population
@@ -447,6 +450,12 @@ public class MeasureEvaluator {
             // Evaluate Population Expressions
             denominator = evaluatePopulationMembership(subjectType, subjectId, denominator, evaluationResult);
             numerator = evaluatePopulationMembership(subjectType, subjectId, numerator, evaluationResult);
+            // remove denominator values not in IP
+            denominator.getResources().retainAll(initialPopulation.getResources());
+            denominator.getSubjects().retainAll(initialPopulation.getSubjects());
+            // remove numerator values if not in Denominator
+            numerator.getSubjects().retainAll(denominator.getSubjects());
+            numerator.getResources().retainAll(denominator.getResources());
 
             // Evaluate Exclusions and Exception Populations
             if (denominatorExclusion != null) {
@@ -465,39 +474,56 @@ public class MeasureEvaluator {
             if (groupDef.isBooleanBasis()) {
                 // Remove Subject and Resource Exclusions
                 if (denominatorExclusion != null) {
-                    denominator.getSubjects().removeAll(denominatorExclusion.getSubjects());
-                    denominator.getResources().removeAll(denominatorExclusion.getResources());
+                    // numerator should not include den-exclusions
                     numerator.getSubjects().removeAll(denominatorExclusion.getSubjects());
-                    numerator.getResources().removeAll(denominatorExclusion.getResources());
+                    numerator.removeOverlaps(denominatorExclusion.getSubjectResources());
+
+                    // verify exclusion results are found in denominator
+                    denominatorExclusion.getResources().retainAll(denominator.getResources());
+                    denominatorExclusion.getSubjects().retainAll(denominator.getSubjects());
+                    denominatorExclusion.retainOverlaps(denominator.getSubjectResources());
                 }
                 if (numeratorExclusion != null) {
-                    numerator.getSubjects().removeAll(numeratorExclusion.getSubjects());
-                    numerator.getResources().removeAll(numeratorExclusion.getResources());
+                    // verify results are in Numerator
+                    numeratorExclusion.getResources().retainAll(numerator.getResources());
+                    numeratorExclusion.getSubjects().retainAll(numerator.getSubjects());
+                    numeratorExclusion.retainOverlaps(numerator.getSubjectResources());
                 }
                 if (denominatorException != null) {
                     // Remove Subjects Exceptions that are present in Numerator
                     denominatorException.getSubjects().removeAll(numerator.getSubjects());
                     denominatorException.getResources().removeAll(numerator.getResources());
-                    // Remove Subjects in Denominator that are not in Numerator
-                    denominator.getSubjects().removeAll(denominatorException.getSubjects());
-                    denominator.getResources().removeAll(denominatorException.getResources());
+                    denominatorException.removeOverlaps(numerator.getSubjectResources());
+
+                    // verify exception results are found in denominator
+                    denominatorException.getResources().retainAll(denominator.getResources());
+                    denominatorException.getSubjects().retainAll(denominator.getSubjects());
+                    denominatorException.retainOverlaps(denominator.getSubjectResources());
                 }
             } else {
                 // Remove Only Resource Exclusions
                 // * Multiple resources can be from one subject and represented in multiple populations
                 // * This is why we only remove resources and not subjects too for `Resource Basis`.
                 if (denominatorExclusion != null) {
-                    denominator.getResources().removeAll(denominatorExclusion.getResources());
+                    // remove any denominator-exception subjects/resources found in Numerator
                     numerator.getResources().removeAll(denominatorExclusion.getResources());
+                    numerator.removeOverlaps(denominatorExclusion.getSubjectResources());
+                    // verify exclusion results are found in denominator
+                    denominatorExclusion.getResources().retainAll(denominator.getResources());
+                    denominatorExclusion.retainOverlaps(denominator.getSubjectResources());
                 }
                 if (numeratorExclusion != null) {
-                    numerator.getResources().removeAll(numeratorExclusion.getResources());
+                    // verify exclusion results are found in numerator results, otherwise remove
+                    numeratorExclusion.getResources().retainAll(numerator.getResources());
+                    numeratorExclusion.retainOverlaps(numerator.getSubjectResources());
                 }
                 if (denominatorException != null) {
                     // Remove Resource Exceptions that are present in Numerator
                     denominatorException.getResources().removeAll(numerator.getResources());
-                    // Remove Resources in Denominator that are not in Numerator
-                    denominator.getResources().removeAll(denominatorException.getResources());
+                    denominatorException.removeOverlaps(numerator.getSubjectResources());
+                    // verify exception results are found in denominator
+                    denominatorException.getResources().retainAll(denominator.getResources());
+                    denominatorException.retainOverlaps(denominator.getSubjectResources());
                 }
             }
             if (reportType.equals(MeasureReportType.INDIVIDUAL) && populationSize == 1 && dateOfCompliance != null) {
@@ -525,20 +551,13 @@ public class MeasureEvaluator {
                     evaluatePopulationMembership(subjectType, subjectId, measurePopulation, evaluationResult);
 
             if (measurePopulationExclusion != null) {
-                measurePopulationExclusion = evaluatePopulationMembership(
+                evaluatePopulationMembership(
                         subjectType, subjectId, groupDef.getSingle(MEASUREPOPULATIONEXCLUSION), evaluationResult);
+                // verify exclusions are in measure-population
+                measurePopulationExclusion.getResources().retainAll(measurePopulation.getResources());
+                measurePopulationExclusion.getSubjects().retainAll(measurePopulation.getSubjects());
             }
-            // Apply Exclusions to Population
-            if (groupDef.isBooleanBasis()) {
-                if (measurePopulationExclusion != null) {
-                    measurePopulation.getSubjects().removeAll(measurePopulationExclusion.getSubjects());
-                    measurePopulation.getResources().removeAll(measurePopulationExclusion.getResources());
-                }
-            } else {
-                if (measurePopulationExclusion != null) {
-                    measurePopulation.getResources().removeAll(measurePopulationExclusion.getResources());
-                }
-            }
+
             // Evaluate Observation Population
             if (measureObservation != null) {
                 for (Object resource : measurePopulation.getResources()) {
@@ -576,7 +595,7 @@ public class MeasureEvaluator {
         populationBasisValidator.validateGroupPopulations(measureDef, groupDef, evaluationResult);
         populationBasisValidator.validateStratifiers(measureDef, groupDef, evaluationResult);
 
-        evaluateStratifiers(groupDef, subjectId, groupDef.stratifiers(), evaluationResult);
+        evaluateStratifiers(subjectId, groupDef.stratifiers(), evaluationResult);
 
         var scoring = groupDef.measureScoring();
         switch (scoring) {
@@ -614,38 +633,51 @@ public class MeasureEvaluator {
         }
     }
 
-    protected void evaluateStratifiers(
-            GroupDef groupDef,
-            String subjectId,
-            List<StratifierDef> stratifierDefs,
-            EvaluationResult evaluationResult) {
-        for (StratifierDef sd : stratifierDefs) {
-            if (!sd.components().isEmpty()) {
-                throw new UnsupportedOperationException("multi-component stratifiers are not yet supported.");
+    protected Object addStratifierResult(Object result, String subjectId) {
+        if (result instanceof Iterable) {
+            var resultIter = ((Iterable<?>) result).iterator();
+            if (!resultIter.hasNext()) {
+                result = null;
+            } else {
+                result = resultIter.next();
             }
 
-            // TODO: Handle list values as components?
-            var expressionResult = evaluationResult.forExpression(sd.expression());
-            Object result = expressionResult.value();
-            if (result instanceof Iterable) {
-                var resultIter = ((Iterable<?>) result).iterator();
-                if (!resultIter.hasNext()) {
-                    result = null;
-                } else {
-                    result = resultIter.next();
-                }
-
-                if (resultIter.hasNext()) {
-                    throw new InvalidRequestException(
-                            "stratifiers may not return multiple values for subjectId: " + subjectId);
-                }
+            if (resultIter.hasNext()) {
+                throw new InvalidRequestException(
+                        "stratifiers may not return multiple values for subjectId: " + subjectId);
             }
+        }
+        return result;
+    }
 
+    protected void addStratifierComponentResult(
+            List<StratifierComponentDef> components, EvaluationResult evaluationResult, String subjectId) {
+        for (StratifierComponentDef component : components) {
+            var expressionResult = evaluationResult.forExpression(component.expression());
+            Object result = addStratifierResult(expressionResult.value(), subjectId);
             if (result != null) {
-                sd.putResult(subjectId, result, this.context.getState().getEvaluatedResources());
+                component.putResult(subjectId, result, this.context.getState().getEvaluatedResources());
             }
+        }
+    }
 
-            clearEvaluatedResources();
+    protected void evaluateStratifiers(
+            String subjectId, List<StratifierDef> stratifierDefs, EvaluationResult evaluationResult) {
+        for (StratifierDef sd : stratifierDefs) {
+
+            if (!sd.components().isEmpty()) {
+                addStratifierComponentResult(sd.components(), evaluationResult, subjectId);
+            } else {
+
+                var expressionResult = evaluationResult.forExpression(sd.expression());
+                Object result = addStratifierResult(expressionResult.value(), subjectId);
+                if (result != null) {
+                    sd.putResult(
+                            subjectId, // context of CQL expression ex: Patient based
+                            result,
+                            this.context.getState().getEvaluatedResources());
+                }
+            }
         }
     }
 }

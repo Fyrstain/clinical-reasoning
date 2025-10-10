@@ -1,14 +1,12 @@
 package org.opencds.cqf.fhir.cr.questionnaire;
 
 import static java.util.Objects.requireNonNull;
-import static org.opencds.cqf.fhir.utility.Parameters.newBooleanPart;
-import static org.opencds.cqf.fhir.utility.Parameters.newParameters;
+import static org.opencds.cqf.fhir.utility.PackageHelper.packageParameters;
 import static org.opencds.cqf.fhir.utility.repository.Repositories.createRestRepository;
 import static org.opencds.cqf.fhir.utility.repository.Repositories.proxy;
 
 import ca.uhn.fhir.context.FhirVersionEnum;
 import java.util.List;
-import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.instance.model.api.IBaseBackboneElement;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseExtension;
@@ -76,6 +74,14 @@ public class QuestionnaireProcessor {
         this.populateProcessor = populateProcessor;
     }
 
+    public EvaluationSettings getEvaluationSettings() {
+        return evaluationSettings;
+    }
+
+    public ModelResolver getModelResolver() {
+        return modelResolver;
+    }
+
     public <C extends IPrimitiveType<String>, R extends IBaseResource> R resolveQuestionnaire(
             Either3<C, IIdType, R> questionnaire) {
         return questionnaireResolver.resolve(questionnaire);
@@ -129,8 +135,21 @@ public class QuestionnaireProcessor {
 
     public <C extends IPrimitiveType<String>, R extends IBaseResource> IBaseResource generateQuestionnaire(
             Either3<C, IIdType, R> profile, boolean supportedOnly, boolean requiredOnly, String id) {
-        var request =
-                new GenerateRequest(resolveStructureDefinition(profile), supportedOnly, requiredOnly, modelResolver);
+        return generateQuestionnaire(profile, supportedOnly, requiredOnly, id, null);
+    }
+
+    public <C extends IPrimitiveType<String>, R extends IBaseResource> IBaseResource generateQuestionnaire(
+            Either3<C, IIdType, R> profile,
+            boolean supportedOnly,
+            boolean requiredOnly,
+            String id,
+            LibraryEngine libraryEngine) {
+        var request = new GenerateRequest(
+                resolveStructureDefinition(profile),
+                supportedOnly,
+                requiredOnly,
+                libraryEngine != null ? libraryEngine : new LibraryEngine(repository, evaluationSettings),
+                modelResolver);
         return generateQuestionnaire(request, id);
     }
 
@@ -146,12 +165,7 @@ public class QuestionnaireProcessor {
 
     public <C extends IPrimitiveType<String>> IBaseBundle packageQuestionnaire(
             Either3<C, IIdType, IBaseResource> questionnaire, boolean isPut) {
-        return packageQuestionnaire(
-                questionnaire,
-                newParameters(
-                        repository.fhirContext(),
-                        "package-parameters",
-                        newBooleanPart(repository.fhirContext(), "isPut", isPut)));
+        return packageQuestionnaire(questionnaire, packageParameters(fhirVersion, null, isPut));
     }
 
     public <C extends IPrimitiveType<String>> IBaseBundle packageQuestionnaire(
@@ -183,19 +197,14 @@ public class QuestionnaireProcessor {
             IBaseExtension<?, ?> launchContext,
             IBaseParameters parameters,
             IBaseBundle data,
-            boolean useServerData,
             LibraryEngine libraryEngine) {
-        if (StringUtils.isBlank(subjectId)) {
-            throw new IllegalArgumentException("Missing required parameter: 'subject'");
-        }
         return new PopulateRequest(
                 questionnaire,
-                Ids.newId(fhirVersion, Ids.ensureIdType(subjectId, SUBJECT_TYPE)),
+                subjectId == null ? null : Ids.newId(fhirVersion, Ids.ensureIdType(subjectId, SUBJECT_TYPE)),
                 context,
                 launchContext,
                 parameters,
                 data,
-                useServerData,
                 libraryEngine != null ? libraryEngine : new LibraryEngine(repository, evaluationSettings),
                 modelResolver);
     }
@@ -243,7 +252,6 @@ public class QuestionnaireProcessor {
                 launchContext,
                 parameters,
                 data,
-                useServerData,
                 new LibraryEngine(repository, this.evaluationSettings));
     }
 
@@ -254,7 +262,6 @@ public class QuestionnaireProcessor {
             IBaseExtension<?, ?> launchContext,
             IBaseParameters parameters,
             IBaseBundle data,
-            boolean useServerData,
             LibraryEngine libraryEngine) {
         return populate(
                 resolveQuestionnaire(questionnaire),
@@ -263,7 +270,6 @@ public class QuestionnaireProcessor {
                 launchContext,
                 parameters,
                 data,
-                useServerData,
                 libraryEngine);
     }
 
@@ -274,10 +280,9 @@ public class QuestionnaireProcessor {
             IBaseExtension<?, ?> launchContext,
             IBaseParameters parameters,
             IBaseBundle data,
-            boolean useServerData,
             LibraryEngine libraryEngine) {
         return populate(buildPopulateRequest(
-                questionnaire, subjectId, context, launchContext, parameters, data, useServerData, libraryEngine));
+                questionnaire, subjectId, context, launchContext, parameters, data, libraryEngine));
     }
 
     public IBaseResource populate(PopulateRequest request) {

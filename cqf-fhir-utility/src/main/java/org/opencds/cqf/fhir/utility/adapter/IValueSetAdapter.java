@@ -11,11 +11,21 @@ public interface IValueSetAdapter extends IKnowledgeArtifactAdapter {
 
     public <T extends IBaseBackboneElement> T getExpansion();
 
+    public boolean hasExpansion();
+
+    public boolean hasExpansionContains();
+
+    public List<IValueSetExpansionContainsAdapter> getExpansionContains();
+
     public <T extends IBaseBackboneElement> T newExpansion();
+
+    public List<IValueSetConceptSetAdapter> getComposeInclude();
 
     public List<String> getValueSetIncludes();
 
     public boolean hasCompose();
+
+    public boolean hasComposeInclude();
 
     /**
      * A simple compose element of a ValueSet must have a compose without an exclude element. Each element of the

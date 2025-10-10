@@ -53,9 +53,9 @@ import org.hl7.fhir.r4.model.MeasureReport.StratifierGroupComponent;
 import org.hl7.fhir.r4.model.MeasureReport.StratifierGroupPopulationComponent;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.OperationOutcome;
+import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Resource;
-import org.hl7.fhir.r4.model.ResourceType;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -80,7 +80,8 @@ import org.opencds.cqf.fhir.cr.measure.common.MeasurePopulationType;
 import org.opencds.cqf.fhir.cr.measure.constant.MeasureConstants;
 import org.opencds.cqf.fhir.utility.repository.ig.IgRepository;
 
-public class R4MeasureEvaluationTest extends BaseMeasureEvaluationTest {
+@SuppressWarnings("squid:S1135")
+class R4MeasureEvaluationTest extends BaseMeasureEvaluationTest {
 
     private static final CodeType POPULATION_BASIS_BOOLEAN = new CodeType("boolean");
     private static final CodeType POPULATION_BASIS_ENCOUNTER = new CodeType("Encounter");
@@ -94,39 +95,8 @@ public class R4MeasureEvaluationTest extends BaseMeasureEvaluationTest {
             Paths.get(getResourcePath(this.getClass()) + "/org/opencds/cqf/fhir/cr/measure/r4/FHIR347/"));
     private MeasureEvaluationOptions evaluationOptions = MeasureEvaluationOptions.defaultOptions();
 
-    private final R4PopulationBasisValidator populationBasisValidator = new R4PopulationBasisValidator();
-
     @Test
     void cohortMeasureEvaluation() {
-        Patient patient = john_doe();
-
-        RetrieveProvider retrieveProvider = mock(RetrieveProvider.class);
-        when(retrieveProvider.retrieve(
-                        eq("Patient"),
-                        anyString(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any()))
-                .thenReturn(List.of(patient));
-
-        String cql = cql_with_dateTime() + sde_race() + "define InitialPopulation: 'Doe' in Patient.name.family\n";
-
-        Measure measure = cohort_measure();
-
-        MeasureReport report =
-                runTest(cql, Collections.singletonList(patient.getId()), measure, retrieveProvider, null);
-        checkEvidence(report);
-    }
-
-    @Test
-    void sdeInMeasureEvaluation() {
         Patient patient = john_doe();
 
         RetrieveProvider retrieveProvider = mock(RetrieveProvider.class);
@@ -365,14 +335,23 @@ public class R4MeasureEvaluationTest extends BaseMeasureEvaluationTest {
         assertEquals(MeasureReportStatus.ERROR, report.getStatus());
         hasContainedOperationOutcomeMsg(
                 report,
-                "group expression criteria results for expression: [InitialPopulation] and scoring: [PROPORTION] must fall within accepted types for population basis: [Encounter] for Measure: http://test.com/fhir/Measure/Test");
+                "group expression criteria results for expression: [InitialPopulation] and scoring: [PROPORTION] must fall within accepted types for population basis: [Encounter] for Measure: [http://test.com/fhir/Measure/Test] due to mismatch between total result classes: [Boolean] and matching result classes: []");
     }
 
-    public void hasContainedOperationOutcomeMsg(MeasureReport report, String msg) {
-        assertTrue(report.getContained().stream()
-                .filter(t -> t.getResourceType().equals(ResourceType.OperationOutcome))
-                .map(y -> (OperationOutcome) y)
-                .anyMatch(x -> x.getIssueFirstRep().getDiagnostics().contains(msg)));
+    public void hasContainedOperationOutcomeMsg(MeasureReport report, String expectedMsg) {
+        assertNotNull(expectedMsg);
+        assertTrue(expectedMsg.length() > 1);
+
+        final List<String> actualDiagnostics = report.getContained().stream()
+                .filter(OperationOutcome.class::isInstance)
+                .map(OperationOutcome.class::cast)
+                .map(OperationOutcome::getIssueFirstRep)
+                .map(OperationOutcomeIssueComponent::getDiagnostics)
+                .toList();
+
+        assertTrue(
+                actualDiagnostics.stream().anyMatch(actualMsg -> actualMsg.contains(expectedMsg)),
+                "Expected: %n%s was not found in actual:%n%s".formatted(expectedMsg, actualDiagnostics));
     }
 
     @Test

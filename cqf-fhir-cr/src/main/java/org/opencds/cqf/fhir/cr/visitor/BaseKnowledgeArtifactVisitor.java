@@ -28,8 +28,11 @@ import org.opencds.cqf.fhir.utility.Canonicals;
 import org.opencds.cqf.fhir.utility.PackageHelper;
 import org.opencds.cqf.fhir.utility.SearchHelper;
 import org.opencds.cqf.fhir.utility.adapter.IAdapterFactory;
+import org.opencds.cqf.fhir.utility.adapter.IDependencyInfo;
+import org.opencds.cqf.fhir.utility.adapter.IEndpointAdapter;
 import org.opencds.cqf.fhir.utility.adapter.IKnowledgeArtifactAdapter;
 import org.opencds.cqf.fhir.utility.adapter.IKnowledgeArtifactVisitor;
+import org.opencds.cqf.fhir.utility.client.TerminologyServerClient;
 
 public abstract class BaseKnowledgeArtifactVisitor implements IKnowledgeArtifactVisitor {
     String isOwnedUrl = "http://hl7.org/fhir/StructureDefinition/artifact-isOwned";
@@ -110,6 +113,18 @@ public abstract class BaseKnowledgeArtifactVisitor implements IKnowledgeArtifact
             List<String> include,
             ImmutableTriple<List<String>, List<String>, List<String>> versionTuple)
             throws PreconditionFailedException {
+        recursiveGather(adapter, gatheredResources, capability, include, versionTuple, null, null);
+    }
+
+    protected void recursiveGather(
+            IKnowledgeArtifactAdapter adapter,
+            Map<String, IKnowledgeArtifactAdapter> gatheredResources,
+            List<String> capability,
+            List<String> include,
+            ImmutableTriple<List<String>, List<String>, List<String>> versionTuple,
+            IEndpointAdapter terminologyEndpoint,
+            TerminologyServerClient client)
+            throws PreconditionFailedException {
         if (adapter == null) {
             return;
         }
@@ -135,12 +150,20 @@ public abstract class BaseKnowledgeArtifactVisitor implements IKnowledgeArtifact
                             }
                         }
                     })
-                    .map(ra -> SearchHelper.searchRepositoryByCanonicalWithPaging(repository, ra.getReference()))
-                    .map(searchBundle -> (IDomainResource) BundleHelper.getEntryResourceFirstRep(searchBundle))
+                    .map(ra -> Optional.ofNullable(
+                                    SearchHelper.searchRepositoryByCanonicalWithPaging(repository, ra.getReference()))
+                            .map(bundle -> (IDomainResource) BundleHelper.getEntryResourceFirstRep(bundle))
+                            .orElseGet(() -> tryGetValueSetsFromTxServer(ra, client, terminologyEndpoint)))
                     .filter(r -> r != null)
                     .map(r -> IAdapterFactory.forFhirVersion(fhirVersion()).createKnowledgeArtifactAdapter(r))
-                    .forEach(component ->
-                            recursiveGather(component, gatheredResources, capability, include, versionTuple));
+                    .forEach(component -> recursiveGather(
+                            component,
+                            gatheredResources,
+                            capability,
+                            include,
+                            versionTuple,
+                            terminologyEndpoint,
+                            client));
         }
     }
 
@@ -172,5 +195,15 @@ public abstract class BaseKnowledgeArtifactVisitor implements IKnowledgeArtifact
             relatedArtifacts.add(IKnowledgeArtifactAdapter.newRelatedArtifact(
                     fhirVersion(), "depends-on", reference, adapter.getDescriptor()));
         }
+    }
+
+    private IDomainResource tryGetValueSetsFromTxServer(
+            IDependencyInfo ra, TerminologyServerClient client, IEndpointAdapter endpoint) {
+        if (client != null
+                && endpoint != null
+                && Canonicals.getResourceType(ra.getReference()).equals("ValueSet")) {
+            return client.getResource(endpoint, ra.getReference()).orElse(null);
+        }
+        return null;
     }
 }

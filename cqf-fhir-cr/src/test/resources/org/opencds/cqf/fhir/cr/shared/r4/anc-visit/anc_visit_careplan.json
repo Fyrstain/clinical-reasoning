@@ -8,7 +8,7 @@
       "instantiatesCanonical": [
         "http://fhir.org/guides/cdc/opioid-cds/PlanDefinition/AncVisit-PlanDefinition"
       ],
-      "status": "draft",
+      "status": "active",
       "intent": "proposal",
       "subject": {
         "reference": "Patient/TEST_PATIENT"
@@ -25,7 +25,7 @@
             ]
           },
           "resource": {
-            "reference": "Task/careplan-activity"
+            "reference": "#careplan-activity"
           }
         }
       ]
@@ -103,7 +103,7 @@
   "instantiatesCanonical": [
     "http://fhir.org/guides/cdc/opioid-cds/PlanDefinition/AncVisit-PlanDefinition"
   ],
-  "status": "draft",
+  "status": "active",
   "intent": "proposal",
   "subject": {
     "reference": "Patient/TEST_PATIENT"
@@ -116,7 +116,7 @@
   "activity": [
     {
       "reference": {
-        "reference": "#RequestGroup/AncVisit-PlanDefinition"
+        "reference": "#AncVisit-PlanDefinition"
       }
     }
   ]

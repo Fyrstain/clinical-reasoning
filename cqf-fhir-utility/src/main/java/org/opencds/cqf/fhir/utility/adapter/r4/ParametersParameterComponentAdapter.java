@@ -11,37 +11,40 @@ import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.Resource;
 import org.hl7.fhir.r4.model.Type;
 import org.opencds.cqf.cql.engine.model.ModelResolver;
+import org.opencds.cqf.fhir.utility.adapter.IAdapterFactory;
 import org.opencds.cqf.fhir.utility.adapter.IParametersParameterComponentAdapter;
 import org.opencds.cqf.fhir.utility.model.FhirModelResolverCache;
 
 class ParametersParameterComponentAdapter implements IParametersParameterComponentAdapter {
 
     private final FhirContext fhirContext = FhirContext.forR4Cached();
-    private final Parameters.ParametersParameterComponent parametersParametersComponent;
+    private final Parameters.ParametersParameterComponent parametersParameterComponent;
     private final ModelResolver modelResolver;
+    private final IAdapterFactory adapterFactory;
 
     protected Parameters.ParametersParameterComponent getParametersParameterComponent() {
-        return this.parametersParametersComponent;
+        return this.parametersParameterComponent;
     }
 
-    public ParametersParameterComponentAdapter(IBaseBackboneElement parametersParametersComponent) {
-        if (parametersParametersComponent == null) {
-            throw new IllegalArgumentException("parametersParametersComponent can not be null");
+    public ParametersParameterComponentAdapter(IBaseBackboneElement parametersParameterComponent) {
+        if (parametersParameterComponent == null) {
+            throw new IllegalArgumentException("parametersParameterComponent can not be null");
         }
 
-        if (!parametersParametersComponent.fhirType().equals("Parameters.parameter")) {
+        if (!parametersParameterComponent.fhirType().equals("Parameters.parameter")) {
             throw new IllegalArgumentException(
-                    "element passed as parametersParametersComponent argument is not a ParametersParameterComponent Element");
+                    "element passed as parametersParameterComponent argument is not a ParametersParameterComponent Element");
         }
 
-        this.parametersParametersComponent = (ParametersParameterComponent) parametersParametersComponent;
+        this.parametersParameterComponent = (ParametersParameterComponent) parametersParameterComponent;
         modelResolver = FhirModelResolverCache.resolverForVersion(
                 fhirContext.getVersion().getVersion());
+        adapterFactory = IAdapterFactory.forFhirContext(fhirContext);
     }
 
     @Override
     public IBaseBackboneElement get() {
-        return this.parametersParametersComponent;
+        return this.parametersParameterComponent;
     }
 
     @Override
@@ -55,15 +58,17 @@ class ParametersParameterComponentAdapter implements IParametersParameterCompone
     }
 
     @Override
-    public List<IBaseBackboneElement> getPart() {
-        return this.getParametersParameterComponent().getPart().stream().collect(Collectors.toList());
+    public List<IParametersParameterComponentAdapter> getPart() {
+        return this.getParametersParameterComponent().getPart().stream()
+                .map(adapterFactory::createParametersParameter)
+                .toList();
     }
 
     @Override
     public List<IBaseDatatype> getPartValues(String name) {
         return this.getParametersParameterComponent().getPart().stream()
                 .filter(p -> p.getName().equals(name))
-                .map(p -> p.getValue())
+                .map(ParametersParameterComponent::getValue)
                 .collect(Collectors.toList());
     }
 

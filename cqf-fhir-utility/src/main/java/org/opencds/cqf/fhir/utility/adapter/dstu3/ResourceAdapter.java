@@ -16,9 +16,6 @@ class ResourceAdapter extends BaseResourceAdapter {
 
     public ResourceAdapter(IBaseResource resource) {
         super(resource);
-        if (resource == null) {
-            throw new IllegalArgumentException("resource can not be null");
-        }
 
         if (!resource.getStructureFhirVersionEnum().equals(FhirVersionEnum.DSTU3)) {
             throw new IllegalArgumentException("resource is incorrect fhir version for this adapter");
@@ -34,7 +31,7 @@ class ResourceAdapter extends BaseResourceAdapter {
     }
 
     protected Optional<DomainResource> getDomainResource() {
-        return ofNullable(resource instanceof DomainResource ? (DomainResource) resource : null);
+        return ofNullable(resource instanceof DomainResource domainResource ? domainResource : null);
     }
 
     @Override

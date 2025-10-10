@@ -26,6 +26,9 @@ public class Constants {
 
     public static final String ALT_EXPRESSION_EXT =
             "http://hl7.org/fhir/us/ecr/StructureDefinition/us-ph-alternativeExpression";
+
+    public static final String FHIR_TYPE_EXTENSION =
+            "http://hl7.org/fhir/StructureDefinition/structuredefinition-fhir-type";
     public static final String PERTAINS_TO_GOAL = "http://hl7.org/fhir/StructureDefinition/resource-pertainsToGoal";
     public static final String REQUEST_DO_NOT_PERFORM = "http://hl7.org/fhir/StructureDefinition/request-doNotPerform";
     public static final String QUESTIONNAIRE_RESPONSE_AUTHOR =
@@ -35,7 +38,6 @@ public class Constants {
     public static final String QUESTIONNAIRE_UNIT = "http://hl7.org/fhir/StructureDefinition/questionnaire-unit";
     public static final String QUESTIONNAIRE_UNIT_VALUE_SET =
             "http://hl7.org/fhir/StructureDefinition/questionnaire-unitValueSet";
-
     public static final String VARIABLE_EXTENSION = "http://hl7.org/fhir/StructureDefinition/variable";
 
     public static final String CPG_ASSERTION_EXPRESSION =
@@ -59,6 +61,8 @@ public class Constants {
     public static final String CPG_INPUT_TEXT = "http://hl7.org/fhir/uv/cpg/StructureDefinition/cpg-input-text";
     public static final String CPG_INPUT_DESCRIPTION =
             "http://hl7.org/fhir/uv/cpg/StructureDefinition/cpg-input-description";
+    public static final String CPG_PARAMETER_DEFINITION =
+            "http://hl7.org/fhir/uv/cpg/StructureDefinition/cpg-parameterDefinition";
 
     public static final String CPG_CUSTOM_ACTIVITY_KIND =
             "http://hl7.org/fhir/uv/cpg/StructureDefinition/cpg-custom-activity-kind";
@@ -69,12 +73,23 @@ public class Constants {
     public static final String CQIF_LIBRARY = "http://hl7.org/fhir/StructureDefinition/cqif-library";
     public static final String CQIF_CQL_EXPRESSION = "http://hl7.org/fhir/StructureDefinition/cqif-cqlExpression";
 
+    public static final String CQF_APPLICABILITY_BEHAVIOR =
+            "http://hl7.org/fhir/StructureDefinition/cqf-applicabilityBehavior";
+
+    public enum CqfApplicabilityBehavior {
+        ALL,
+        ANY
+    }
+
     public static final String CQF_CQL_OPTIONS = "http://hl7.org/fhir/StructureDefinition/cqf-cqlOptions";
     public static final String CQF_EXPANSION_PARAMETERS =
             "http://hl7.org/fhir/StructureDefinition/cqf-expansionParameters";
     public static final String CQF_EXPRESSION = "http://hl7.org/fhir/StructureDefinition/cqf-expression";
     public static final String CQF_LIBRARY = "http://hl7.org/fhir/StructureDefinition/cqf-library";
     public static final String CQF_CALCULATED_VALUE = "http://hl7.org/fhir/StructureDefinition/cqf-calculatedValue";
+    public static final String CQF_FHIR_QUERY_PATTERN = "http://hl7.org/fhir/StructureDefinition/cqf-fhirQueryPattern";
+    public static final String CQF_DIRECT_REFERENCE_EXTENSION =
+            "http://hl7.org/fhir/StructureDefinition/cqf-directReferenceCode";
 
     public static final String CQFM_EFFECTIVE_DATA_REQUIREMENTS =
             "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/cqfm-effectiveDataRequirements";
@@ -85,7 +100,8 @@ public class Constants {
     public static final String CQFM_INPUT_PARAMETERS =
             "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/cqfm-inputParameters";
     public static final String CQFM_COMPONENT = "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/cqfm-component";
-
+    public static final String CQFM_DIRECT_REFERENCE_EXTENSION =
+            "http://hl7.org/fhir/us/cqfmeasures/StructureDefinition/cqfm-directReferenceCode";
     public static final String CRMI_EFFECTIVE_DATA_REQUIREMENTS =
             "http://hl7.org/fhir/uv/crmi/StructureDefinition/crmi-effectiveDataRequirements";
 
@@ -96,6 +112,10 @@ public class Constants {
             "http://hl7.org/fhir/StructureDefinition/questionnaire-hidden";
     public static final String SDC_QUESTIONNAIRE_ITEM_EXTRACTION_CONTEXT =
             "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemExtractionContext";
+    public static final String SDC_QUESTIONNAIRE_DEFINITION_EXTRACT =
+            "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-definitionExtract";
+    public static final String SDC_QUESTIONNAIRE_DEFINITION_EXTRACT_VALUE =
+            "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-definitionExtractValue";
     public static final String SDC_QUESTIONNAIRE_ITEM_POPULATION_CONTEXT =
             "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext";
     public static final String SDC_QUESTIONNAIRE_IS_SUBJECT =
@@ -128,7 +148,8 @@ public class Constants {
         ENCOUNTER,
         LOCATION,
         USER,
-        STUDY
+        STUDY,
+        CLINICAL
     }
 
     public static final String SDC_QUESTIONNAIRE_SUB_QUESTIONNAIRE =

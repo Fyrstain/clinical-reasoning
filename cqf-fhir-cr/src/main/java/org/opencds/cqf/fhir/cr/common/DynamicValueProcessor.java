@@ -15,8 +15,7 @@ import org.slf4j.LoggerFactory;
  */
 public class DynamicValueProcessor {
     private static final Logger logger = LoggerFactory.getLogger(DynamicValueProcessor.class);
-
-    public DynamicValueProcessor() {}
+    private static final String EXPRESSION = "expression";
 
     /**
      * Processes all dynamicValues on a definition element and sets the resulting values to the corresponding path on the resource passed in
@@ -26,7 +25,7 @@ public class DynamicValueProcessor {
      * @param definitionElement the definition of the dynamicValue containing the expression and path
      */
     public void processDynamicValues(ICpgRequest request, IBaseResource resource, IElement definitionElement) {
-        var context = definitionElement instanceof IBaseResource ? (IBaseResource) definitionElement : resource;
+        var context = definitionElement instanceof IBaseResource baseResource ? baseResource : resource;
         processDynamicValues(request, context, resource, definitionElement, null);
     }
 
@@ -60,23 +59,19 @@ public class DynamicValueProcessor {
     }
 
     protected CqfExpression getDynamicValueExpression(ICpgRequest request, IBaseBackboneElement dynamicValue) {
-        switch (request.getFhirVersion()) {
-            case DSTU3:
-                return new CqfExpression(
-                        request.resolvePathString(dynamicValue, "language"),
-                        request.resolvePathString(dynamicValue, "expression"),
-                        request.getDefaultLibraryUrl());
-            case R4:
-                return CqfExpression.of(
-                        request.resolvePath(dynamicValue, "expression", org.hl7.fhir.r4.model.Expression.class),
-                        request.getDefaultLibraryUrl());
-            case R5:
-                return CqfExpression.of(
-                        request.resolvePath(dynamicValue, "expression", org.hl7.fhir.r5.model.Expression.class),
-                        request.getDefaultLibraryUrl());
-            default:
-                return null;
-        }
+        return switch (request.getFhirVersion()) {
+            case DSTU3 -> new CqfExpression(
+                    request.resolvePathString(dynamicValue, "language"),
+                    request.resolvePathString(dynamicValue, EXPRESSION),
+                    request.getReferencedLibraries());
+            case R4 -> CqfExpression.of(
+                    request.resolvePath(dynamicValue, EXPRESSION, org.hl7.fhir.r4.model.Expression.class),
+                    request.getReferencedLibraries());
+            case R5 -> CqfExpression.of(
+                    request.resolvePath(dynamicValue, EXPRESSION, org.hl7.fhir.r5.model.Expression.class),
+                    request.getReferencedLibraries());
+            default -> null;
+        };
     }
 
     protected void resolveDynamicValue(
@@ -89,7 +84,7 @@ public class DynamicValueProcessor {
         // Strip % so it is supported as defined in the spec
         path = path.replace("%", "");
         var cqfExpression = getDynamicValueExpression(request, dynamicValue);
-        if (path != null && cqfExpression != null) {
+        if (cqfExpression != null) {
             var result = getDynamicValueExpressionResult(request, cqfExpression, context, resource);
             if (result == null || result.isEmpty()) {
                 logger.warn(String.format(
@@ -130,6 +125,7 @@ public class DynamicValueProcessor {
                         request.getSubjectId().getIdPart(),
                         cqfExpression,
                         request.getParameters(),
+                        request.getRawParameters(),
                         request.getData(),
                         context,
                         resource);

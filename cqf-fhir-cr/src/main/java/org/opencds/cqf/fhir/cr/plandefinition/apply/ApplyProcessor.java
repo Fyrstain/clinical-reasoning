@@ -16,7 +16,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.hl7.fhir.instance.model.api.IBaseBackboneElement;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -110,6 +109,7 @@ public class ApplyProcessor implements IApplyProcessor {
             addEntry(resultBundle, newEntryWithResource(resource));
         }
         if (!request.getItems(request.getQuestionnaire()).isEmpty()) {
+            addEntry(resultBundle, newEntryWithResource(request.getQuestionnaire()));
             addEntry(resultBundle, newEntryWithResource(populateProcessor.populate(request.toPopulateRequest())));
         }
 
@@ -117,27 +117,38 @@ public class ApplyProcessor implements IApplyProcessor {
     }
 
     protected void initApply(ApplyRequest request) {
-        var questionnaire = generateProcessor.generate(
-                request.getPlanDefinition().getIdElement().getIdPart());
-        var url = request.resolvePathString(request.getPlanDefinition(), "url")
-                .replace("/PlanDefinition/", "/Questionnaire/");
+        var url = request.resolvePathString(request.getPlanDefinition(), "url");
+        // If the PlanDefinition has no URL we will not generate a Questionnaire
+        // We will also add a warning to the result informing the user
         if (url != null) {
-            request.getModelResolver().setValue(questionnaire, "url", uriTypeForVersion(request.getFhirVersion(), url));
-        }
-        var version = request.resolvePathString(request.getPlanDefinition(), "version");
-        if (version != null) {
-            var subject = request.getSubjectId().getIdPart();
-            var formatter = new SimpleDateFormat("yyyy-MM-dd-hh.mm.ss");
+            var questionnaire = generateProcessor.generate(
+                    request.getPlanDefinition().getIdElement().getIdPart());
             request.getModelResolver()
                     .setValue(
                             questionnaire,
-                            "version",
-                            stringTypeForVersion(
-                                    request.getFhirVersion(),
-                                    version.concat(String.format("-%s-%s", subject, formatter.format(new Date())))));
+                            "url",
+                            uriTypeForVersion(
+                                    request.getFhirVersion(), url.replace("/PlanDefinition/", "/Questionnaire/")));
+            var version = request.resolvePathString(request.getPlanDefinition(), "version");
+            if (version != null) {
+                var subject = request.getSubjectId().getIdPart();
+                var formatter = new SimpleDateFormat("yyyy-MM-dd-hh.mm.ss");
+                request.getModelResolver()
+                        .setValue(
+                                questionnaire,
+                                "version",
+                                stringTypeForVersion(
+                                        request.getFhirVersion(),
+                                        version.concat(
+                                                String.format("-%s-%s", subject, formatter.format(new Date())))));
+            }
+            request.setQuestionnaire(questionnaire);
+            request.addCqlLibraryExtension();
+        } else {
+            request.logException(String.format(
+                    "PlanDefinition %s is missing a canonical url.",
+                    request.getPlanDefinition().getIdElement().getValue()));
         }
-        request.setQuestionnaire(questionnaire);
-        request.addCqlLibraryExtension();
         extractQuestionnaireResponse(request);
     }
 
@@ -148,8 +159,8 @@ public class ApplyProcessor implements IApplyProcessor {
 
         var questionnaireResponses = getEntryResources(request.getData()).stream()
                 .filter(r -> r.fhirType().equals("QuestionnaireResponse"))
-                .collect(Collectors.toList());
-        if (questionnaireResponses != null && !questionnaireResponses.isEmpty()) {
+                .toList();
+        if (!questionnaireResponses.isEmpty()) {
             for (var questionnaireResponse : questionnaireResponses) {
                 try {
                     var extractBundle = extractProcessor.extract(
@@ -157,7 +168,6 @@ public class ApplyProcessor implements IApplyProcessor {
                             null,
                             request.getParameters(),
                             request.getData(),
-                            request.getUseServerData(),
                             request.getLibraryEngine());
                     for (var entry : getEntry(extractBundle)) {
                         addEntry(request.getData(), entry);
@@ -230,21 +240,14 @@ public class ApplyProcessor implements IApplyProcessor {
     }
 
     protected IBaseResource liftContainedResourcesToParent(ICpgRequest request, IBaseResource resource) {
-        switch (request.getFhirVersion()) {
-            case DSTU3:
-                return org.opencds.cqf.fhir.utility.dstu3.ContainedHelper.liftContainedResourcesToParent(
-                        (org.hl7.fhir.dstu3.model.DomainResource) resource);
-            case R4:
-                return org.opencds.cqf.fhir.utility.r4.ContainedHelper.liftContainedResourcesToParent(
-                        (org.hl7.fhir.r4.model.DomainResource) resource);
-            case R5:
-                return org.opencds.cqf.fhir.utility.r5.ContainedHelper.liftContainedResourcesToParent(
-                        (org.hl7.fhir.r5.model.DomainResource) resource);
-
-            default:
-                break;
-        }
-
-        return resource;
+        return switch (request.getFhirVersion()) {
+            case DSTU3 -> org.opencds.cqf.fhir.utility.dstu3.ContainedHelper.liftContainedResourcesToParent(
+                    (org.hl7.fhir.dstu3.model.DomainResource) resource);
+            case R4 -> org.opencds.cqf.fhir.utility.r4.ContainedHelper.liftContainedResourcesToParent(
+                    (org.hl7.fhir.r4.model.DomainResource) resource);
+            case R5 -> org.opencds.cqf.fhir.utility.r5.ContainedHelper.liftContainedResourcesToParent(
+                    (org.hl7.fhir.r5.model.DomainResource) resource);
+            default -> resource;
+        };
     }
 }

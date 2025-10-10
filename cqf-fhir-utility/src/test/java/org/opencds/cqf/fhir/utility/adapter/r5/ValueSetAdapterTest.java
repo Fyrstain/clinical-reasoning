@@ -19,7 +19,12 @@ import org.hl7.fhir.r5.model.Library;
 import org.hl7.fhir.r5.model.Period;
 import org.hl7.fhir.r5.model.RelatedArtifact;
 import org.hl7.fhir.r5.model.ValueSet;
+import org.hl7.fhir.r5.model.ValueSet.ConceptSetComponent;
+import org.hl7.fhir.r5.model.ValueSet.ValueSetComposeComponent;
+import org.hl7.fhir.r5.model.ValueSet.ValueSetExpansionComponent;
+import org.hl7.fhir.r5.model.ValueSet.ValueSetExpansionContainsComponent;
 import org.junit.jupiter.api.Test;
+import org.opencds.cqf.fhir.utility.adapter.IValueSetAdapter;
 import org.opencds.cqf.fhir.utility.adapter.TestVisitor;
 
 class ValueSetAdapterTest {
@@ -28,14 +33,14 @@ class ValueSetAdapterTest {
     @Test
     void invalid_object_fails() {
         var library = new Library();
-        assertThrows(IllegalArgumentException.class, () -> new ValueSetAdapter(library));
+        assertThrows(IllegalArgumentException.class, () -> adapterFactory.createValueSet(library));
     }
 
     @Test
     void adapter_accepts_visitor() {
         var spyVisitor = spy(new TestVisitor());
         var valueSet = new ValueSet();
-        var adapter = adapterFactory.createKnowledgeArtifactAdapter(valueSet);
+        var adapter = adapterFactory.createValueSet(valueSet);
         doReturn(valueSet).when(spyVisitor).visit(any(ValueSetAdapter.class), any());
         adapter.accept(spyVisitor, null);
         verify(spyVisitor, times(1)).visit(any(ValueSetAdapter.class), any());
@@ -165,5 +170,29 @@ class ValueSetAdapterTest {
         extractedDependencies.forEach(dep -> {
             assertTrue(dependencies.indexOf(dep.getReference()) >= 0);
         });
+    }
+
+    @Test
+    void testExpansion() {
+        var contains = new ValueSetExpansionContainsComponent().setCode("test");
+        var expansion = new ValueSetExpansionComponent().addContains(contains);
+        expansion.setId("test-expansion");
+        var valueSet = new ValueSet().setExpansion(expansion);
+        var adapter = (IValueSetAdapter) adapterFactory.createKnowledgeArtifactAdapter(valueSet);
+        assertTrue(adapter.hasExpansion());
+        assertTrue(adapter.hasExpansionContains());
+        assertEquals(expansion, adapter.getExpansion());
+        assertEquals(contains, adapter.getExpansionContains().get(0).get());
+    }
+
+    @Test
+    void testCompose() {
+        var set = new ConceptSetComponent().addValueSet("test");
+        var compose = new ValueSetComposeComponent().addInclude(set);
+        var valueSet = new ValueSet().setCompose(compose);
+        var adapter = (IValueSetAdapter) adapterFactory.createKnowledgeArtifactAdapter(valueSet);
+        assertTrue(adapter.hasCompose());
+        assertTrue(adapter.hasComposeInclude());
+        assertEquals(set, adapter.getComposeInclude().get(0).get());
     }
 }

@@ -5,11 +5,13 @@ import java.util.stream.Collectors;
 import org.hl7.fhir.dstu3.model.Parameters;
 import org.hl7.fhir.dstu3.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.dstu3.model.Resource;
+import org.hl7.fhir.dstu3.model.StringType;
 import org.hl7.fhir.dstu3.model.Type;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseBackboneElement;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.opencds.cqf.fhir.utility.adapter.IParametersAdapter;
+import org.opencds.cqf.fhir.utility.adapter.IParametersParameterComponentAdapter;
 
 class ParametersAdapter extends ResourceAdapter implements IParametersAdapter {
 
@@ -23,16 +25,22 @@ class ParametersAdapter extends ResourceAdapter implements IParametersAdapter {
         this.parameters = (Parameters) parameters;
     }
 
-    private Parameters parameters;
+    private final Parameters parameters;
 
     protected Parameters getParameters() {
         return this.parameters;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public List<ParametersParameterComponent> getParameter() {
-        return this.getParameters().getParameter();
+    public boolean hasParameter() {
+        return parameters.hasParameter();
+    }
+
+    @Override
+    public List<IParametersParameterComponentAdapter> getParameter() {
+        return this.getParameters().getParameter().stream()
+                .map(adapterFactory::createParametersParameter)
+                .toList();
     }
 
     @Override
@@ -41,6 +49,11 @@ class ParametersAdapter extends ResourceAdapter implements IParametersAdapter {
                 .setParameter(parametersParameterComponents.stream()
                         .map(x -> (ParametersParameterComponent) x)
                         .collect(Collectors.toList()));
+    }
+
+    @Override
+    public void addParameter(String name, String value) {
+        getParameters().addParameter().setName(name).setValue(new StringType(value));
     }
 
     @Override
@@ -81,14 +94,20 @@ class ParametersAdapter extends ResourceAdapter implements IParametersAdapter {
     public List<Type> getParameterValues(String name) {
         return this.getParameters().getParameter().stream()
                 .filter(p -> p.getName().equals(name))
-                .map(p -> p.getValue())
+                .map(ParametersParameterComponent::getValue)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public ParametersParameterComponent getParameter(String name) {
-        return this.getParameters().getParameter().stream()
+    public boolean hasParameter(String name) {
+        return getParameters().getParameter().stream().anyMatch(p -> p.getName().equals(name));
+    }
+
+    @Override
+    public IParametersParameterComponentAdapter getParameter(String name) {
+        return getParameters().getParameter().stream()
                 .filter(p -> p.getName().equals(name))
+                .map(adapterFactory::createParametersParameter)
                 .findFirst()
                 .orElse(null);
     }

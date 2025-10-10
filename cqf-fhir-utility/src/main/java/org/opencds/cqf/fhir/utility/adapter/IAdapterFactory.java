@@ -10,36 +10,37 @@ import org.hl7.fhir.instance.model.api.IDomainResource;
 
 public interface IAdapterFactory {
 
-    public static IAdapterFactory forFhirContext(FhirContext fhirContext) {
+    static IAdapterFactory forFhirContext(FhirContext fhirContext) {
         return forFhirVersion(fhirContext.getVersion().getVersion());
     }
 
-    public static IAdapterFactory forFhirVersion(FhirVersionEnum fhirVersion) {
-        switch (fhirVersion) {
-            case DSTU3:
-                return new org.opencds.cqf.fhir.utility.adapter.dstu3.AdapterFactory();
-            case R4:
-                return new org.opencds.cqf.fhir.utility.adapter.r4.AdapterFactory();
-            case R5:
-                return new org.opencds.cqf.fhir.utility.adapter.r5.AdapterFactory();
-
-            default:
-                throw new IllegalArgumentException(
-                        String.format("Unsupported FHIR version: %s", fhirVersion.toString()));
-        }
-    }
-
-    public static IResourceAdapter createAdapterForResource(IBaseResource resource) {
-        return forFhirVersion(resource.getStructureFhirVersionEnum()).createResource(resource);
+    static IAdapterFactory forFhirVersion(FhirVersionEnum fhirVersion) {
+        return switch (fhirVersion) {
+            case DSTU3 -> new org.opencds.cqf.fhir.utility.adapter.dstu3.AdapterFactory();
+            case R4 -> new org.opencds.cqf.fhir.utility.adapter.r4.AdapterFactory();
+            case R5 -> new org.opencds.cqf.fhir.utility.adapter.r5.AdapterFactory();
+            default -> throw new IllegalArgumentException(
+                    String.format("Unsupported FHIR version: %s", fhirVersion.toString()));
+        };
     }
 
     /**
-     * Creates an adapter that exposes common resource operations across multiple versions of FHIR
+     * Creates an adapter that exposes common Resource operations across multiple versions of FHIR
      *
      * @param resource A FHIR Resource
      * @return an adapter exposing common api calls
      */
-    public IResourceAdapter createResource(IBaseResource resource);
+    static IResourceAdapter createAdapterForResource(IBaseResource resource) {
+        return forFhirVersion(resource.getStructureFhirVersionEnum()).createResource(resource);
+    }
+
+    /**
+     * Creates an adapter that exposes common Resource operations across multiple versions of FHIR
+     *
+     * @param resource A FHIR Resource
+     * @return an adapter exposing common api calls
+     */
+    IResourceAdapter createResource(IBaseResource resource);
 
     /**
      * Creates an adapter that exposes common MetadataResource operations across multiple versions of FHIR
@@ -47,7 +48,7 @@ public interface IAdapterFactory {
      * @param metadataResource A FHIR MetadataResource
      * @return an adapter exposing common api calls
      */
-    public IKnowledgeArtifactAdapter createKnowledgeArtifactAdapter(IDomainResource metadataResource);
+    IKnowledgeArtifactAdapter createKnowledgeArtifactAdapter(IDomainResource metadataResource);
 
     /**
      * Creates an adapter that exposes common Library operations across multiple versions of FHIR
@@ -55,7 +56,23 @@ public interface IAdapterFactory {
      * @param library a FHIR Library Resource
      * @return an adapter exposing common api calls
      */
-    public ILibraryAdapter createLibrary(IBaseResource library);
+    ILibraryAdapter createLibrary(IBaseResource library);
+
+    /**
+     * Creates an adapter that exposes common PlanDefinition operations across multiple versions of FHIR
+     *
+     * @param planDefinition a FHIR PlanDefinition Resource
+     * @return an adapter exposing common api calls
+     */
+    IPlanDefinitionAdapter createPlanDefinition(IBaseResource planDefinition);
+
+    /**
+     * Creates an adapter that exposes common ActivityDefinition operations across multiple versions of FHIR
+     *
+     * @param activityDefinition a FHIR ActivityDefinition Resource
+     * @return an adapter exposing common api calls
+     */
+    IActivityDefinitionAdapter createActivityDefinition(IBaseResource activityDefinition);
 
     /**
      * Creates an adapter that exposes common Attachment operations across multiple versions of FHIR
@@ -63,7 +80,7 @@ public interface IAdapterFactory {
      * @param attachment a FHIR Attachment Structure
      * @return an adapter exposing common api calls
      */
-    public IAttachmentAdapter createAttachment(ICompositeType attachment);
+    IAttachmentAdapter createAttachment(ICompositeType attachment);
 
     /**
      * Creates an adapter that exposes common Parameters operations across multiple versions of FHIR
@@ -71,25 +88,78 @@ public interface IAdapterFactory {
      * @param parameters a FHIR Parameters Resource
      * @return an adapter exposing common api calls
      */
-    public IParametersAdapter createParameters(IBaseParameters parameters);
+    IParametersAdapter createParameters(IBaseParameters parameters);
 
     /**
      * Creates an adapter that exposes common ParametersParameterComponent operations across multiple
      * versions of FHIR
      *
-     * @param parametersParametersComponent a FHIR ParametersParameterComponent Structure
+     * @param parametersParameterComponent a FHIR ParametersParameterComponent Structure
      * @return an adapter exposing common api calls
      */
-    public IParametersParameterComponentAdapter createParametersParameters(
-            IBaseBackboneElement parametersParametersComponent);
+    IParametersParameterComponentAdapter createParametersParameter(IBaseBackboneElement parametersParameterComponent);
 
     /**
-     * Creates an adapter that exposes common Attachment operations across multiple versions of FHIR
+     * Creates an adapter that exposes common Endpoint operations across multiple versions of FHIR
      *
      * @param endpoint a FHIR Endpoint Resource
      * @return an adapter exposing common api calls
      */
-    public IEndpointAdapter createEndpoint(IBaseResource endpoint);
+    IEndpointAdapter createEndpoint(IBaseResource endpoint);
 
-    public ICodeableConceptAdapter createCodeableConcept(ICompositeType codeableConcept);
+    /**
+     * Creates an adapter that exposes common CodeableConcept operations across multiple versions of FHIR
+     *
+     * @param codeableConcept a FHIR CodeableConcept object
+     * @return an adapter exposing common api calls
+     */
+    ICodeableConceptAdapter createCodeableConcept(ICompositeType codeableConcept);
+
+    /**
+     * Creates an adapter that exposes common Coding operations across multiple versions of FHIR
+     *
+     * @param coding a FHIR Coding object
+     * @return an adapter exposing common api calls
+     */
+    ICodingAdapter createCoding(ICompositeType coding);
+
+    /**
+     * Creates an adapter that exposes common ElementDefinition operations across multiple versions of FHIR
+     *
+     * @param element a FHIR ElementDefinition object
+     * @return an adapter exposing common api calls
+     */
+    IElementDefinitionAdapter createElementDefinition(ICompositeType element);
+
+    /**
+     * Creates an adapter that exposes common RequestOrchestrationActionComponent operations across multiple versions of FHIR
+     *
+     * @param action a FHIR RequestOrchestrationActionComponent object
+     * @return an adapter exposing common api calls
+     */
+    IRequestActionAdapter createRequestAction(IBaseBackboneElement action);
+
+    /**
+     * Creates an adapter that exposes common DataRequirement operations across multiple versions of FHIR
+     *
+     * @param dataRequirement a FHIR DataRequirement object
+     * @return an adapter exposing common api calls
+     */
+    IDataRequirementAdapter createDataRequirement(ICompositeType dataRequirement);
+
+    /**
+     * Creates an adapter that exposes common Questionnaire operations across multiple versions of FHIR
+     *
+     * @param questionnaire a FHIR Questionnaire object
+     * @return an adapter exposing common api calls
+     */
+    IQuestionnaireAdapter createQuestionnaire(IBaseResource questionnaire);
+
+    /**
+     * Creates an adapter that exposes common ValueSet operations across multiple versions of FHIR
+     *
+     * @param valueSet a FHIR ValueSet object
+     * @return an adapter exposing common api calls
+     */
+    IValueSetAdapter createValueSet(IBaseResource valueSet);
 }

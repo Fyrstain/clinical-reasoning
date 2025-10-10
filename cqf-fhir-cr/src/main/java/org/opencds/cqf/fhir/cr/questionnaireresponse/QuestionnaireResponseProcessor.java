@@ -1,6 +1,7 @@
 package org.opencds.cqf.fhir.cr.questionnaireresponse;
 
 import static java.util.Objects.requireNonNull;
+import static org.opencds.cqf.fhir.utility.repository.Repositories.proxy;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
@@ -109,11 +110,15 @@ public class QuestionnaireResponseProcessor {
                     .filter(r -> r.fhirType().equals(QUESTIONNAIRE)
                             && canonical
                                     .getValueAsString()
-                                    .equals(r.getIdElement().getIdPart()))
+                                    .equals(getContainedId(r.getIdElement().getIdPart())))
                     .findFirst()
                     .orElse(null);
         }
         return questionnaire;
+    }
+
+    private String getContainedId(String id) {
+        return id.startsWith("#") ? id : "#" + id;
     }
 
     public <R extends IBaseResource> IBaseBundle extract(Either<IIdType, R> resource) {
@@ -126,12 +131,12 @@ public class QuestionnaireResponseProcessor {
             IBaseParameters parameters,
             IBaseBundle data,
             boolean useServerData) {
+        repository = proxy(repository, useServerData, (Repository) null, null, null);
         return extract(
                 questionnaireResponseId,
                 questionnaireId,
                 parameters,
                 data,
-                useServerData,
                 new LibraryEngine(repository, evaluationSettings));
     }
 
@@ -140,7 +145,6 @@ public class QuestionnaireResponseProcessor {
             Either<IIdType, R> questionnaireId,
             IBaseParameters parameters,
             IBaseBundle data,
-            boolean useServerData,
             LibraryEngine libraryEngine) {
         var questionnaireResponse = resolveQuestionnaireResponse(questionnaireResponseId);
         var questionnaire = resolveQuestionnaire(questionnaireResponse, questionnaireId);
@@ -151,9 +155,9 @@ public class QuestionnaireResponseProcessor {
                 subject == null ? null : subject.getReferenceElement(),
                 parameters,
                 data,
-                useServerData,
                 libraryEngine,
-                modelResolver);
+                modelResolver,
+                null);
         var processor = extractProcessor != null ? extractProcessor : new ExtractProcessor();
         return processor.extract(request);
     }

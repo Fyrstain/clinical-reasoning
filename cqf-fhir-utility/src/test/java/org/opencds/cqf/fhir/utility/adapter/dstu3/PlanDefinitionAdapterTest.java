@@ -15,16 +15,19 @@ import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import org.hl7.fhir.dstu3.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.dstu3.model.Extension;
 import org.hl7.fhir.dstu3.model.Library;
 import org.hl7.fhir.dstu3.model.Period;
 import org.hl7.fhir.dstu3.model.PlanDefinition;
+import org.hl7.fhir.dstu3.model.PlanDefinition.PlanDefinitionActionComponent;
 import org.hl7.fhir.dstu3.model.Reference;
 import org.hl7.fhir.dstu3.model.RelatedArtifact;
 import org.hl7.fhir.dstu3.model.StringType;
 import org.hl7.fhir.dstu3.model.UriType;
 import org.junit.jupiter.api.Test;
+import org.opencds.cqf.fhir.utility.adapter.IPlanDefinitionAdapter;
 import org.opencds.cqf.fhir.utility.adapter.TestVisitor;
 
 class PlanDefinitionAdapterTest {
@@ -33,7 +36,7 @@ class PlanDefinitionAdapterTest {
     @Test
     void invalid_object_fails() {
         var library = new Library();
-        assertThrows(IllegalArgumentException.class, () -> new PlanDefinitionAdapter(library));
+        assertThrows(IllegalArgumentException.class, () -> adapterFactory.createPlanDefinition(library));
     }
 
     @Test
@@ -203,7 +206,37 @@ class PlanDefinitionAdapterTest {
         var extractedDependencies = adapter.getDependencies();
         assertEquals(extractedDependencies.size(), dependencies.size());
         extractedDependencies.forEach(dep -> {
-            assertTrue(dependencies.indexOf(dep.getReference()) >= 0);
+            assertTrue(dependencies.contains(dep.getReference()));
         });
+    }
+
+    @Test
+    void testDescription() {
+        var planDef = new PlanDefinition();
+        var description = "test description";
+        planDef.setDescription(description);
+        var adapter = (IPlanDefinitionAdapter) adapterFactory.createKnowledgeArtifactAdapter(planDef);
+        assertEquals(description, adapter.getDescription());
+    }
+
+    @Test
+    void testAction() {
+        var action = new PlanDefinitionActionComponent().setDefinition(new Reference("test"));
+        var planDef = new PlanDefinition().addAction(action);
+        var adapter = adapterFactory.createPlanDefinition(planDef);
+        assertTrue(adapter.hasAction());
+        assertEquals(action, adapter.getAction().get(0).get());
+    }
+
+    @Test
+    void testLibrary() {
+        var planDef = new PlanDefinition();
+        var library = "Library/test";
+        var libraryRef = new Reference(library);
+        planDef.addLibrary(libraryRef);
+        var adapter = (IPlanDefinitionAdapter) adapterFactory.createKnowledgeArtifactAdapter(planDef);
+        assertTrue(adapter.hasLibrary());
+        assertEquals(List.of(library), adapter.getLibrary());
+        assertEquals(Map.of("test", library), adapter.getReferencedLibraries());
     }
 }

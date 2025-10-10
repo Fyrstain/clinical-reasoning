@@ -1,8 +1,7 @@
 package org.opencds.cqf.fhir.cr.library;
 
 import static java.util.Objects.requireNonNull;
-import static org.opencds.cqf.fhir.utility.Parameters.newBooleanPart;
-import static org.opencds.cqf.fhir.utility.Parameters.newParameters;
+import static org.opencds.cqf.fhir.utility.PackageHelper.packageParameters;
 import static org.opencds.cqf.fhir.utility.repository.Repositories.createRestRepository;
 import static org.opencds.cqf.fhir.utility.repository.Repositories.proxy;
 
@@ -79,12 +78,7 @@ public class LibraryProcessor {
 
     public <C extends IPrimitiveType<String>, R extends IBaseResource> IBaseBundle packageLibrary(
             Either3<C, IIdType, R> library, boolean isPut) {
-        return packageLibrary(
-                library,
-                newParameters(
-                        repository.fhirContext(),
-                        "package-parameters",
-                        newBooleanPart(repository.fhirContext(), "isPut", isPut)));
+        return packageLibrary(library, packageParameters(fhirVersion, null, isPut));
     }
 
     public <C extends IPrimitiveType<String>, R extends IBaseResource> IBaseBundle packageLibrary(
@@ -114,7 +108,6 @@ public class LibraryProcessor {
             String subject,
             List<String> expression,
             IBaseParameters parameters,
-            boolean useServerData,
             IBaseBundle data,
             List<? extends IBaseBackboneElement> prefetchData,
             LibraryEngine libraryEngine) {
@@ -123,7 +116,6 @@ public class LibraryProcessor {
                 StringUtils.isBlank(subject) ? null : Ids.newId(fhirVersion, subject),
                 expression,
                 parameters,
-                useServerData,
                 data,
                 prefetchData,
                 libraryEngine,
@@ -171,7 +163,6 @@ public class LibraryProcessor {
                 subject,
                 expression,
                 parameters,
-                useServerData,
                 data,
                 prefetchData,
                 new LibraryEngine(repository, this.evaluationSettings));
@@ -182,14 +173,13 @@ public class LibraryProcessor {
             String subject,
             List<String> expression,
             IBaseParameters parameters,
-            boolean useServerData,
             IBaseBundle data,
             List<? extends IBaseBackboneElement> prefetchData,
             LibraryEngine libraryEngine) {
         var processor = evaluateProcessor != null
                 ? evaluateProcessor
                 : new EvaluateProcessor(this.repository, this.evaluationSettings);
-        return processor.evaluate(buildEvaluateRequest(
-                library, subject, expression, parameters, useServerData, data, prefetchData, libraryEngine));
+        return processor.evaluate(
+                buildEvaluateRequest(library, subject, expression, parameters, data, prefetchData, libraryEngine));
     }
 }
