@@ -2,6 +2,7 @@ package org.opencds.cqf.fhir.cr.questionnaireresponse.extract;
 
 import java.util.List;
 import java.util.Map;
+import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseCoding;
 import org.hl7.fhir.instance.model.api.IBaseExtension;
 import org.hl7.fhir.instance.model.api.IBaseReference;
@@ -23,9 +24,14 @@ public class ProcessItem {
         }
         var categoryExt =
                 itemPair.getResponseItem().getExtensionByUrl(Constants.SDC_QUESTIONNAIRE_OBSERVATION_EXTRACT_CATEGORY);
+        if (categoryExt == null) {
+            categoryExt =
+                request.getExtensionByUrl((IBase) itemPair.getItem(), Constants.SDC_QUESTIONNAIRE_OBSERVATION_EXTRACT_CATEGORY);
+        }
         var answers = itemPair.getResponseItem().getAnswer();
         var questionnaireItem = itemPair.getItem();
         if (!answers.isEmpty()) {
+            IBaseExtension<?, ?> finalCategoryExt = categoryExt;
             answers.forEach(answer -> {
                 var answerItems = answer.getItem();
                 if (!answerItems.isEmpty()) {
@@ -44,10 +50,20 @@ public class ProcessItem {
                                 linkId,
                                 subject,
                                 questionnaireCodeMap,
-                                categoryExt));
+                                finalCategoryExt));
                     }
                 }
             });
+        } else {
+            var linkId = request.resolvePathString((IBase) itemPair.getResponseItem(), "linkId");
+            resources.add(createObservationFromItemAnswer(
+                request,
+                null,
+                questionnaireItem,
+                linkId,
+                subject,
+                questionnaireCodeMap,
+                categoryExt));
         }
     }
 

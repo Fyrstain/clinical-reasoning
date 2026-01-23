@@ -568,22 +568,18 @@ public class ProcessDefinitionItem {
         var props = new HashMap<String, BaseRuntimeChildDefinition>();
         var targetDef = resourceDefinition;
         for (int i = 0; i < identifiers.length; i++) {
-            var def = targetDef.getChildByName(identifiers[i].split(":")[0]);
-            props.put(identifiers[i], def);
-            if (i < identifiers.length - 1) {
-                if (def instanceof RuntimeChildExtension) {
-                    targetDef = request.getFhirContext()
-                            .getElementDefinition(getClassForTypeAndVersion("Extension", request.getFhirVersion()));
-                } else if (def instanceof RuntimeChildChoiceDefinition choiceDef) {
-                    var elementDef = adapter == null ? null : adapter.getElementByPath(identifiers[i]);
-                    if (elementDef == null) {
-                        targetDef = choiceDef.getChildElementDefinitionByDatatype(
-                                choiceDef.getChoices().get(0));
-                    } else {
-                        targetDef = choiceDef.getChildByName(identifiers[i].replace("[x]", elementDef.getTypeCode()));
-                    }
-                } else if (def instanceof BaseRuntimeChildDatatypeDefinition datatypeDef) {
-                    targetDef = request.getFhirContext().getElementDefinition(datatypeDef.getDatatype());
+            var rawIdentifier = identifiers[i];
+            var rawName = rawIdentifier.split(":")[0];
+            var runtimeName = stripIndexTokens(rawName);
+            var def = targetDef.getChildByName(runtimeName);
+            props.put(rawIdentifier, def);
+            if (def instanceof RuntimeChildChoiceDefinition choiceDef) {
+                var elementDef = adapter == null ? null : adapter.getElementByPath(stripIndexTokens(rawIdentifier));
+                if (elementDef == null) {
+                    targetDef = choiceDef.getChildElementDefinitionByDatatype(choiceDef.getChoices().get(0));
+                } else {
+                    var runtimeChoiceName = stripIndexTokens(rawIdentifier).replace("[x]", elementDef.getTypeCode());
+                    targetDef = choiceDef.getChildByName(runtimeChoiceName);
                 }
             }
         }
@@ -648,5 +644,11 @@ public class ProcessDefinitionItem {
         var meta = resource.getMeta();
         // Consider setting source and lastUpdated here?
         profile.ifPresent(iStructureDefinitionAdapter -> meta.addProfile(iStructureDefinitionAdapter.getCanonical()));
+    }
+
+    private static String stripIndexTokens(String s) {
+        if (s == null) return null;
+        // enlève [=] [0] [+] etc, MAIS ne touche pas à [x]
+        return s.replaceAll("\\[(?!x\\])[^\\]]*\\]", "");
     }
 }
