@@ -600,17 +600,17 @@ public class ProcessDefinitionItem {
                 continue;
             }
 
-            if (def instanceof RuntimeChildResourceBlockDefinition) {
-                targetDef = request.getFhirContext().getElementDefinition(
-                    String.valueOf(def.getValidChildNames()));
-                continue;
-            }
-
-            if (def instanceof RuntimeChildResourceDefinition) {
-                targetDef = request.getFhirContext().getElementDefinition(
-                    def.getValidChildNames().toString());
-                continue;
-            }
+//            if (def instanceof RuntimeChildResourceBlockDefinition) {
+//                targetDef = request.getFhirContext().getElementDefinition(
+//                    String.valueOf(def.getValidChildNames()));
+//                continue;
+//            }
+//
+//            if (def instanceof RuntimeChildResourceDefinition) {
+//                targetDef = request.getFhirContext().getElementDefinition(
+//                    def.getValidChildNames().toString());
+//                continue;
+//            }
 
             throw new IllegalArgumentException(
                 "Unsupported child definition type '" + def.getClass().getName()
