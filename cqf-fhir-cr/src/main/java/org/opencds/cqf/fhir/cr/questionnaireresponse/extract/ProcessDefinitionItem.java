@@ -15,6 +15,7 @@ import ca.uhn.fhir.context.RuntimeChildExtension;
 import ca.uhn.fhir.context.RuntimeChildPrimitiveDatatypeDefinition;
 import ca.uhn.fhir.context.RuntimeChildPrimitiveEnumerationDatatypeDefinition;
 import ca.uhn.fhir.context.RuntimeChildResourceBlockDefinition;
+import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
 import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -431,34 +432,27 @@ public class ProcessDefinitionItem {
     }
 
     protected void processRepeatingWithNested(
-            ExtractRequest request,
-            IBase parent,
-            boolean isNestedRepeating,
-            List<IQuestionnaireResponseItemAnswerComponentAdapter> answers,
-            String[] identifiers,
-            HashMap<String, BaseRuntimeChildDefinition> propertyDefs,
-            IStructureDefinitionAdapter profile) {
+        ExtractRequest request,
+        IBase parent,
+        boolean isNestedRepeating,
+        List<IQuestionnaireResponseItemAnswerComponentAdapter> answers,
+        String[] identifiers,
+        HashMap<String, BaseRuntimeChildDefinition> propertyDefs,
+        IStructureDefinitionAdapter profile) {
         var parentProperty = identifiers[0];
         var childProperty = getChildProperty(identifiers, 1);
-        var isChildList = propertyDefs.get(identifiers[identifiers.length - 1]).isMultipleCardinality();
-        // If we are within a repeating item or the child element is multi cardinality we will use the parent
-        // element
-        // otherwise we will create a new value for each answer and add that to the parent
-        var useParent = isNestedRepeating || isChildList;
+        var lastKey = identifiers[identifiers.length - 1];
+        var lastDef = propertyDefs.get(lastKey);
+        if (lastDef == null) {
+            throw new IllegalArgumentException("Unknown element in path: " + String.join(".", identifiers));
+        }
+
+        var fullPath = parentProperty + "." + childProperty;
+
         answers.forEach(answer -> {
             var answerValue = answer.getValue();
-            if (answerValue != null) {
-                var parentValue = useParent
-                        ? parent
-                        : newBase(
-                                ((BaseRuntimeChildDatatypeDefinition) propertyDefs.get(parentProperty)).getDatatype());
-                setAnswerValue(
-                        request, parentValue, propertyDefs.get(childProperty), childProperty, answerValue, profile);
-                if (!useParent) {
-                    setAnswerValue(
-                            request, parent, propertyDefs.get(parentProperty), parentProperty, parentValue, profile);
-                }
-            }
+            if (answerValue == null) return;
+            request.getModelResolver().setValue(parent, fullPath, answerValue);
         });
     }
 
@@ -561,18 +555,35 @@ public class ProcessDefinitionItem {
     }
 
     protected HashMap<String, BaseRuntimeChildDefinition> getPropertyDefinitions(
-            ExtractRequest request,
-            BaseRuntimeElementDefinition<?> resourceDefinition,
-            IStructureDefinitionAdapter adapter,
-            String[] identifiers) {
+        ExtractRequest request,
+        BaseRuntimeElementDefinition<?> resourceDefinition,
+        IStructureDefinitionAdapter adapter,
+        String[] identifiers) {
         var props = new HashMap<String, BaseRuntimeChildDefinition>();
-        var targetDef = resourceDefinition;
+        BaseRuntimeElementDefinition<?> targetDef = resourceDefinition;
         for (int i = 0; i < identifiers.length; i++) {
             var rawIdentifier = identifiers[i];
             var rawName = rawIdentifier.split(":")[0];
             var runtimeName = stripIndexTokens(rawName);
             var def = targetDef.getChildByName(runtimeName);
             props.put(rawIdentifier, def);
+
+            if (i >= identifiers.length - 1) {
+                continue;
+            }
+
+            if (def == null) {
+                throw new IllegalArgumentException(
+                    "Unknown element '" + runtimeName + "' while resolving path '" + String.join(".", identifiers)
+                        + "' on type '" + targetDef.getName() + "'");
+            }
+
+            if (def instanceof RuntimeChildExtension) {
+                targetDef = request.getFhirContext()
+                    .getElementDefinition(getClassForTypeAndVersion("Extension", request.getFhirVersion()));
+                continue;
+            }
+
             if (def instanceof RuntimeChildChoiceDefinition choiceDef) {
                 var elementDef = adapter == null ? null : adapter.getElementByPath(stripIndexTokens(rawIdentifier));
                 if (elementDef == null) {
@@ -581,7 +592,29 @@ public class ProcessDefinitionItem {
                     var runtimeChoiceName = stripIndexTokens(rawIdentifier).replace("[x]", elementDef.getTypeCode());
                     targetDef = choiceDef.getChildByName(runtimeChoiceName);
                 }
+                continue;
             }
+
+            if (def instanceof BaseRuntimeChildDatatypeDefinition datatypeDef) {
+                targetDef = request.getFhirContext().getElementDefinition(datatypeDef.getDatatype());
+                continue;
+            }
+
+            if (def instanceof RuntimeChildResourceBlockDefinition) {
+                targetDef = request.getFhirContext().getElementDefinition(
+                    String.valueOf(def.getValidChildNames()));
+                continue;
+            }
+
+            if (def instanceof RuntimeChildResourceDefinition) {
+                targetDef = request.getFhirContext().getElementDefinition(
+                    def.getValidChildNames().toString());
+                continue;
+            }
+
+            throw new IllegalArgumentException(
+                "Unsupported child definition type '" + def.getClass().getName()
+                    + "' while resolving '" + String.join(".", identifiers) + "'");
         }
         return props;
     }
@@ -648,7 +681,6 @@ public class ProcessDefinitionItem {
 
     private static String stripIndexTokens(String s) {
         if (s == null) return null;
-        // enlève [=] [0] [+] etc, MAIS ne touche pas à [x]
         return s.replaceAll("\\[(?!x\\])[^\\]]*\\]", "");
     }
 }
