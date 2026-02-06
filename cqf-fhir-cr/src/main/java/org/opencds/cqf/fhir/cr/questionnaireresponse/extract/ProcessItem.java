@@ -23,10 +23,10 @@ public class ProcessItem {
                     "Unable to retrieve Questionnaire code map for Observation based extraction");
         }
         var categoryExt =
-                itemPair.getResponseItem().getExtensionByUrl(Constants.SDC_QUESTIONNAIRE_OBSERVATION_EXTRACT_CATEGORY);
-        if (categoryExt == null) {
-            categoryExt =
-                request.getExtensionByUrl((IBase) itemPair.getItem(), Constants.SDC_QUESTIONNAIRE_OBSERVATION_EXTRACT_CATEGORY);
+            itemPair.getResponseItem().getExtensionByUrl(Constants.SDC_QUESTIONNAIRE_OBSERVATION_EXTRACT_CATEGORY);
+        if (categoryExt == null && itemPair.getItem() != null) {
+            categoryExt = request.getExtensionByUrl((IBase) itemPair.getItem().get(), Constants.SDC_QUESTIONNAIRE_OBSERVATION_EXTRACT_CATEGORY
+            );
         }
         var answers = itemPair.getResponseItem().getAnswer();
         var questionnaireItem = itemPair.getItem();
@@ -55,7 +55,7 @@ public class ProcessItem {
                 }
             });
         } else {
-            var linkId = request.resolvePathString((IBase) itemPair.getResponseItem(), "linkId");
+            var linkId = request.resolvePathString((IBase) itemPair.getResponseItem().get(), "linkId");
             resources.add(createObservationFromItemAnswer(
                 request,
                 null,

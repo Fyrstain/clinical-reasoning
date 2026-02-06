@@ -109,11 +109,13 @@ public class ExtractRequest implements IQuestionnaireRequest {
     }
 
     public boolean isObservationItem(ItemPair item) {
-        return item.getItem() != null && !resolvePathList((IBase) item.getItem(), "code").isEmpty();
+        if (item.getItem() == null || item.getItem().get() == null) return false;
+        return !resolvePathList((IBase) item.getItem().get(), "code").isEmpty();
     }
 
     public boolean hasAnswer(ItemPair item) {
-        return item.getResponseItem() != null && !resolvePathList((IBase) item.getResponseItem(), "answer").isEmpty();
+        if (item.getResponseItem() == null || item.getResponseItem().get() == null) return false;
+        return !resolvePathList((IBase) item.getResponseItem().get(), "answer").isEmpty();
     }
 
     @SuppressWarnings("unchecked")

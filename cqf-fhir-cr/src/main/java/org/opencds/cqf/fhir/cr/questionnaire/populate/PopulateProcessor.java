@@ -1,5 +1,6 @@
 package org.opencds.cqf.fhir.cr.questionnaire.populate;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,8 @@ public class PopulateProcessor implements IPopulateProcessor {
         });
         request.resolveOperationOutcome(
                 request.getQuestionnaireResponseAdapter().get());
+        request.getModelResolver()
+            .setValue(request.getQuestionnaireResponseAdapter().get(), "contained", Collections.singletonList(request.getQuestionnaire()));
         logger.info("$populate operation completed");
         return request.getQuestionnaireResponseAdapter().get();
     }

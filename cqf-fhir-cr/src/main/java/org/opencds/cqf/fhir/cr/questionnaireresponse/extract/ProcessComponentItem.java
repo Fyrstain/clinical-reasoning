@@ -33,35 +33,36 @@ public class ProcessComponentItem {
             throw new IllegalArgumentException(
                 "Unable to retrieve Questionnaire code map for Observation based extraction");
         }
-        var answers = request.resolvePathList((IBase) answerItem, "answer", IBaseBackboneElement.class);
+        var answers = request.resolvePathList((IBase) answerItem.get(), "answer", IBaseBackboneElement.class);
         if (!answers.isEmpty()) {
             answers.forEach(answer -> {
-                var answerItems = request.getQuestionnaireItem((IItemComponentAdapter) answer);
-                if (answerItems.hasItem()) {
-                    answerItems.getItem().forEach(answerChild ->
+                var nestedItems = request.resolvePathList((IBase) answer, "item", IBaseBackboneElement.class);
+                if (nestedItems != null && !nestedItems.isEmpty()) {
+                    nestedItems.forEach(nested -> {
+                        var nestedAdapter = (IQuestionnaireResponseItemComponentAdapter)
+                            request.getAdapterFactory().createQuestionnaireResponseItem((IBaseBackboneElement) nested);
                         processItem(
                             request,
-                            (IQuestionnaireResponseItemComponentAdapter) answerChild,
+                            nestedAdapter,
                             questionnaireItem,
                             questionnaireCodeMap,
                             resources,
                             subject
-                        )
-                    );
-                }
-                else {
-                    var linkId = request.resolvePathString((IBase) answerItem, "linkId");
-                    if (questionnaireCodeMap.get(linkId) != null
-                            && !questionnaireCodeMap.get(linkId).isEmpty()) {
+                        );
+                    });
+                } else {
+                    var linkId = request.resolvePathString((IBase) answerItem.get(), "linkId");
+                    if (questionnaireCodeMap.get(linkId) != null && !questionnaireCodeMap.get(linkId).isEmpty()) {
                         IBaseResource observation = resources.get(resources.size() - 1);
                         addComponentToObservation(
-                                observation,
-                                request,
-                                answer,
-                            (IBaseBackboneElement) questionnaireItem,
-                                linkId,
-                                subject,
-                                questionnaireCodeMap);
+                            observation,
+                            request,
+                            (IBaseBackboneElement) answer,
+                            (IBaseBackboneElement) questionnaireItem.get(),
+                            linkId,
+                            subject,
+                            questionnaireCodeMap
+                        );
                     }
                 }
             });

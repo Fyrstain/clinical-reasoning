@@ -38,7 +38,7 @@ public class ObservationResolver {
             Map<String, List<IBaseCoding>> questionnaireCodeMap,
             IBaseExtension<?, ?> categoryExt) {
         var questionnaireResponse = (QuestionnaireResponse) request.getQuestionnaireResponse();
-        var answer = (QuestionnaireResponseItemAnswerComponent) answerAdapter.get();
+        var answer =  answerAdapter == null ? null : (QuestionnaireResponseItemAnswerComponent) answerAdapter.get();
         var item = (QuestionnaireItemComponent) (itemAdapter == null ? null : itemAdapter.get());
         var obs = new Observation();
         obs.setId(request.getExtractId() + "." + linkId);

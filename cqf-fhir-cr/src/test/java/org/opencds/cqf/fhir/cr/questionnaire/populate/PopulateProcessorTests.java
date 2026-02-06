@@ -75,6 +75,7 @@ class PopulateProcessorTests {
                 actual.getIdElement().getIdPart());
         assertContainedOperationOutcome(request, actual, null);
         assertEquals(questionnaireUrl, actual.getQuestionnaire());
+        assertEquals(originalQuestionnaire, actual.getContained().get(0));
         assertEquals(QuestionnaireResponse.QuestionnaireResponseStatus.INPROGRESS, actual.getStatus());
         assertEquals("Patient/" + PATIENT_ID, actual.getSubject().getReference());
         assertEquals(expectedResponses.stream().map(IAdapter::get).toList(), actual.getItem());
@@ -106,6 +107,7 @@ class PopulateProcessorTests {
                 actual.getIdElement().getIdPart());
         assertContainedOperationOutcome(request, actual, null);
         assertEquals(questionnaireUrl, request.resolvePathString(actual, "questionnaire"));
+        assertEquals(originalQuestionnaire, actual.getContained().get(0));
         assertEquals(
                 org.hl7.fhir.r5.model.QuestionnaireResponse.QuestionnaireResponseStatus.INPROGRESS, actual.getStatus());
         assertEquals("Patient/" + PATIENT_ID, actual.getSubject().getReference());
