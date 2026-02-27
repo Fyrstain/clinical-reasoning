@@ -133,7 +133,7 @@ public class ExtractProcessor implements IExtractProcessor {
                     if (childResponseItem.hasItem()) {
                         processGroupItem(request, childItem, questionnaireCodeMap, resources,
                             groupSubject);
-                    } else if (request.hasAnswer(childItem)) {
+                    } else if (request.hasAnswer(item)) {
                         processItem(request, childItem, questionnaireCodeMap, resources,
                             groupSubject);
                     } else {
@@ -158,7 +158,7 @@ public class ExtractProcessor implements IExtractProcessor {
                     if (childResponseItem.hasItem()) {
                         processGroupItem(request, childPair, questionnaireCodeMap, resources, groupSubject);
                     } else {
-                        processItem(request, childPair, questionnaireCodeMap, resources, groupSubject);
+                        processObservationItem(request, childPair, questionnaireCodeMap, resources, groupSubject);
                     }
                 }
             });

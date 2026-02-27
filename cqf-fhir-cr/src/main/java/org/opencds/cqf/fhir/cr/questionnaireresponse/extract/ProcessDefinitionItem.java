@@ -247,6 +247,15 @@ public class ProcessDefinitionItem {
             var value = fixedValueExt != null
                     ? fixedValueExt.getValue()
                     : getExpressionResult(request, CqfExpression.of(expressionExt, request.getReferencedLibraries()));
+            if (value instanceof List<?> list) {
+                if (list.isEmpty()) {
+                    value = null;
+                } else if (list.size() == 1) {
+                    value = list.get(0);
+                } else {
+                    value = list.get(0);
+                }
+            }
             if (value != null) {
                 var path = getPathAdapter(request, profile, definition);
                 request.getModelResolver().setValue(resource, path.left, value);
