@@ -27,15 +27,20 @@ public class CodeMap {
     }
 
     private static void processQuestionnaireItems(
-            IQuestionnaireRequest request,
-            IQuestionnaireItemComponentAdapter item,
-            Map<String, List<IBaseCoding>> questionnaireCodeMap) {
+        IQuestionnaireRequest request,
+        IQuestionnaireItemComponentAdapter item,
+        Map<String, List<IBaseCoding>> questionnaireCodeMap) {
+
+        var linkId = item.getLinkId();
+        var codes = item.getCode();
+        if (linkId != null) {
+            questionnaireCodeMap.put(linkId, codes);
+        }
+
         if (item.hasItem()) {
             item.getItem().stream()
-                    .map(IQuestionnaireItemComponentAdapter.class::cast)
-                    .forEach(child -> processQuestionnaireItems(request, child, questionnaireCodeMap));
-        } else {
-            questionnaireCodeMap.put(item.getLinkId(), item.getCode());
+                .map(IQuestionnaireItemComponentAdapter.class::cast)
+                .forEach(child -> processQuestionnaireItems(request, child, questionnaireCodeMap));
         }
     }
 }

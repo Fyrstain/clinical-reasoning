@@ -37,7 +37,7 @@ public class ObservationResolver {
             Map<String, List<IBaseCoding>> questionnaireCodeMap,
             IBaseExtension<?, ?> categoryExt) {
         var questionnaireResponse = (QuestionnaireResponse) request.getQuestionnaireResponse();
-        var answer = (QuestionnaireResponseItemAnswerComponent) answerAdapter.get();
+        var answer = answerAdapter == null ? null : (QuestionnaireResponseItemAnswerComponent) answerAdapter.get();
         var item = (QuestionnaireItemComponent) (itemAdapter == null ? null : itemAdapter.get());
         var obs = new Observation();
         obs.setId(request.getExtractId() + "." + linkId);
@@ -67,22 +67,24 @@ public class ObservationResolver {
         obs.setIssuedElement(new InstantType(authoredDate));
         obs.setPerformer(Collections.singletonList(questionnaireResponse.getAuthor()));
 
-        switch (answer.getValue().fhirType()) {
-            case "Coding":
-                obs.setValue(new CodeableConcept().addCoding(answer.getValueCoding()));
-                break;
-            case "date":
-                obs.setValue(new DateTimeType(((DateType) answer.getValue()).getValue()));
-                break;
-            case "decimal", "integer":
-                if (item != null && item.hasExtension(Constants.QUESTIONNAIRE_UNIT)) {
-                    obs.setValue(getQuantity(answer, item));
-                } else {
+        if (answer != null){
+            switch (answer.getValue().fhirType()) {
+                case "Coding":
+                    obs.setValue(new CodeableConcept().addCoding(answer.getValueCoding()));
+                    break;
+                case "date":
+                    obs.setValue(new DateTimeType(((DateType) answer.getValue()).getValue()));
+                    break;
+                case "decimal", "integer":
+                    if (item != null && item.hasExtension(Constants.QUESTIONNAIRE_UNIT)) {
+                        obs.setValue(getQuantity(answer, item));
+                    } else {
+                        obs.setValue(answer.getValue());
+                    }
+                    break;
+                default:
                     obs.setValue(answer.getValue());
-                }
-                break;
-            default:
-                obs.setValue(answer.getValue());
+            }
         }
         obs.setDerivedFrom(Collections.singletonList(new Reference(questionnaireResponse)));
 

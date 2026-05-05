@@ -28,6 +28,6 @@ class QuestionnaireResponseOperationsProviderIT extends BaseCrR4TestServer {
                 null, questionnaireResponse, null, null, null, null, requestDetails);
 
         assertNotNull(result);
-        assertThat(result.getEntry()).hasSize(5);
+        assertThat(result.getEntry()).hasSize(7);
     }
 }

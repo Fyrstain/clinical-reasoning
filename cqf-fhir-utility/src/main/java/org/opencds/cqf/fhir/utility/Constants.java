@@ -176,7 +176,7 @@ public class Constants {
             "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-shortText";
     public static final String SDC_QUESTIONNAIRE_OBSERVATION_EXTRACT_CATEGORY =
             "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-observation-extract-category";
-    public static final String SDC_OBSERVATION_CATEGORY = "http://hl7.org/fhir/observation-category";
+    public static final String SDC_OBSERVATION_CATEGORY = "http://terminology.hl7.org/CodeSystem/observation-category";
     public static final String SDC_CATEGORY_SURVEY = "survey";
     public static final String SDC_QUESTIONNAIRE_LAUNCH_CONTEXT =
             "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext";

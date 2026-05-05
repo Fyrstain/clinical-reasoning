@@ -9,22 +9,26 @@ import static org.opencds.cqf.fhir.utility.VersionUtilities.canonicalTypeForVers
 
 import ca.uhn.fhir.context.BaseRuntimeChildDatatypeDefinition;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
+import ca.uhn.fhir.context.BaseRuntimeDeclaredChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
 import ca.uhn.fhir.context.RuntimeChildExtension;
 import ca.uhn.fhir.context.RuntimeChildPrimitiveDatatypeDefinition;
 import ca.uhn.fhir.context.RuntimeChildPrimitiveEnumerationDatatypeDefinition;
 import ca.uhn.fhir.context.RuntimeChildResourceBlockDefinition;
+import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
 import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseExtension;
+import org.hl7.fhir.instance.model.api.IBaseReference;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.instance.model.api.IDomainResource;
 import org.hl7.fhir.instance.model.api.IIdType;
@@ -58,7 +62,7 @@ public class ProcessDefinitionItem {
         this.expressionProcessor = expressionProcessor;
     }
 
-    public IBaseResource processDefinitionItem(ExtractRequest request, ItemPair item) {
+    public IBaseResource processDefinitionItem(ExtractRequest request, ItemPair item, IBaseReference subject) {
         // Definition-based extraction -
         // http://build.fhir.org/ig/HL7/sdc/extraction.html#definition-based-extraction
 
@@ -75,7 +79,7 @@ public class ProcessDefinitionItem {
         var resource = isCreatedResource
                 ? (IBaseResource) newBaseForVersion(resourceType, request.getFhirVersion())
                 : extractResource;
-        processResource(request, resource, profile, isCreatedResource, item);
+        processResource(request, resource, profile, isCreatedResource, item, subject);
         return resource;
     }
 
@@ -163,7 +167,8 @@ public class ProcessDefinitionItem {
             IBaseResource resource,
             Optional<IStructureDefinitionAdapter> profile,
             boolean isCreatedResource,
-            ItemPair item) {
+            ItemPair item,
+            IBaseReference subject) {
         var resourceDefinition = request.getFhirContext().getElementDefinition(resource.getClass());
         if (isCreatedResource) {
             var id = request.getExtractId();
@@ -176,6 +181,8 @@ public class ProcessDefinitionItem {
             // casting here to identify the signature
             resource.setId((IIdType) Ids.newId(request.getFhirVersion(), id));
             resolveMeta(resource, profile);
+            resolveSubject(request, resource, subject, resourceDefinition);
+            resolveAuthored(request, linkId, resource, resourceDefinition);
         }
         getValueExtensions(request, item)
                 .forEach(valueExt -> processValueExtension(request, resource, profile, valueExt));
@@ -431,34 +438,27 @@ public class ProcessDefinitionItem {
     }
 
     protected void processRepeatingWithNested(
-            ExtractRequest request,
-            IBase parent,
-            boolean isNestedRepeating,
-            List<IQuestionnaireResponseItemAnswerComponentAdapter> answers,
-            String[] identifiers,
-            HashMap<String, BaseRuntimeChildDefinition> propertyDefs,
-            IStructureDefinitionAdapter profile) {
+        ExtractRequest request,
+        IBase parent,
+        boolean isNestedRepeating,
+        List<IQuestionnaireResponseItemAnswerComponentAdapter> answers,
+        String[] identifiers,
+        HashMap<String, BaseRuntimeChildDefinition> propertyDefs,
+        IStructureDefinitionAdapter profile) {
         var parentProperty = identifiers[0];
         var childProperty = getChildProperty(identifiers, 1);
-        var isChildList = propertyDefs.get(identifiers[identifiers.length - 1]).isMultipleCardinality();
-        // If we are within a repeating item or the child element is multi cardinality we will use the parent
-        // element
-        // otherwise we will create a new value for each answer and add that to the parent
-        var useParent = isNestedRepeating || isChildList;
+        var lastKey = identifiers[identifiers.length - 1];
+        var lastDef = propertyDefs.get(lastKey);
+        if (lastDef == null) {
+            throw new IllegalArgumentException("Unknown element in path: " + String.join(".", identifiers));
+        }
+
+        var fullPath = parentProperty + "." + childProperty;
+
         answers.forEach(answer -> {
             var answerValue = answer.getValue();
-            if (answerValue != null) {
-                var parentValue = useParent
-                        ? parent
-                        : newBase(
-                                ((BaseRuntimeChildDatatypeDefinition) propertyDefs.get(parentProperty)).getDatatype());
-                setAnswerValue(
-                        request, parentValue, propertyDefs.get(childProperty), childProperty, answerValue, profile);
-                if (!useParent) {
-                    setAnswerValue(
-                            request, parent, propertyDefs.get(parentProperty), parentProperty, parentValue, profile);
-                }
-            }
+            if (answerValue == null) return;
+            request.getModelResolver().setValue(parent, fullPath, answerValue);
         });
     }
 
@@ -561,31 +561,59 @@ public class ProcessDefinitionItem {
     }
 
     protected HashMap<String, BaseRuntimeChildDefinition> getPropertyDefinitions(
-            ExtractRequest request,
-            BaseRuntimeElementDefinition<?> resourceDefinition,
-            IStructureDefinitionAdapter adapter,
-            String[] identifiers) {
+        ExtractRequest request,
+        BaseRuntimeElementDefinition<?> resourceDefinition,
+        IStructureDefinitionAdapter adapter,
+        String[] identifiers) {
         var props = new HashMap<String, BaseRuntimeChildDefinition>();
-        var targetDef = resourceDefinition;
+        BaseRuntimeElementDefinition<?> targetDef = resourceDefinition;
         for (int i = 0; i < identifiers.length; i++) {
-            var def = targetDef.getChildByName(identifiers[i].split(":")[0]);
-            props.put(identifiers[i], def);
-            if (i < identifiers.length - 1) {
-                if (def instanceof RuntimeChildExtension) {
-                    targetDef = request.getFhirContext()
-                            .getElementDefinition(getClassForTypeAndVersion("Extension", request.getFhirVersion()));
-                } else if (def instanceof RuntimeChildChoiceDefinition choiceDef) {
-                    var elementDef = adapter == null ? null : adapter.getElementByPath(identifiers[i]);
-                    if (elementDef == null) {
-                        targetDef = choiceDef.getChildElementDefinitionByDatatype(
-                                choiceDef.getChoices().get(0));
-                    } else {
-                        targetDef = choiceDef.getChildByName(identifiers[i].replace("[x]", elementDef.getTypeCode()));
-                    }
-                } else if (def instanceof BaseRuntimeChildDatatypeDefinition datatypeDef) {
-                    targetDef = request.getFhirContext().getElementDefinition(datatypeDef.getDatatype());
-                }
+            var rawIdentifier = identifiers[i];
+            var rawName = rawIdentifier.split(":")[0];
+            var runtimeName = stripIndexTokens(rawName);
+            var def = targetDef.getChildByName(runtimeName);
+            props.put(rawIdentifier, def);
+
+            if (i >= identifiers.length - 1) {
+                continue;
             }
+
+            if (def == null) {
+                throw new IllegalArgumentException(
+                    "Unknown element '" + runtimeName + "' while resolving path '" + String.join(".", identifiers)
+                        + "' on type '" + targetDef.getName() + "'");
+            }
+
+            if (def instanceof RuntimeChildExtension) {
+                targetDef = request.getFhirContext()
+                    .getElementDefinition(getClassForTypeAndVersion("Extension", request.getFhirVersion()));
+                continue;
+            }
+
+            if (def instanceof RuntimeChildChoiceDefinition choiceDef) {
+                var elementDef = adapter == null ? null : adapter.getElementByPath(stripIndexTokens(rawIdentifier));
+                if (elementDef == null) {
+                    targetDef = choiceDef.getChildElementDefinitionByDatatype(choiceDef.getChoices().get(0));
+                } else {
+                    var runtimeChoiceName = stripIndexTokens(rawIdentifier).replace("[x]", elementDef.getTypeCode());
+                    targetDef = choiceDef.getChildByName(runtimeChoiceName);
+                }
+                continue;
+            }
+
+            if (def instanceof BaseRuntimeChildDatatypeDefinition datatypeDef) {
+                targetDef = request.getFhirContext().getElementDefinition(datatypeDef.getDatatype());
+                continue;
+            }
+
+            if (def instanceof RuntimeChildResourceBlockDefinition || def instanceof RuntimeChildResourceDefinition) {
+                targetDef = def.getChildByName(runtimeName);
+                continue;
+            }
+
+            throw new IllegalArgumentException(
+                "Unsupported child definition type '" + def.getClass().getName()
+                    + "' while resolving '" + String.join(".", identifiers) + "'");
         }
         return props;
     }
@@ -648,5 +676,116 @@ public class ProcessDefinitionItem {
         var meta = resource.getMeta();
         // Consider setting source and lastUpdated here?
         profile.ifPresent(iStructureDefinitionAdapter -> meta.addProfile(iStructureDefinitionAdapter.getCanonical()));
+    }
+
+    private void resolveSubject(
+        ExtractRequest request,
+        IBaseResource resource,
+        IBaseReference subject,
+        BaseRuntimeElementDefinition<?> resourceDefinition) {
+        var subjectPath = getSubjectPath(resourceDefinition);
+        if (subjectPath != null) {
+            request.getModelResolver().setValue(resource, subjectPath, subject);
+        }
+    }
+
+    private List<BaseRuntimeDeclaredChildDefinition> getDateDefs(BaseRuntimeElementDefinition<?> definition) {
+        List<BaseRuntimeChildDefinition> results = new ArrayList<>();
+        results.add(definition.getChildByName("onset"));
+        results.add(definition.getChildByName("onset[x]"));
+        results.add(definition.getChildByName("issued"));
+        results.add(definition.getChildByName("effective"));
+        results.add(definition.getChildByName("effective[x]"));
+        results.add(definition.getChildByName("recordDate"));
+        results.add(definition.getChildByName("recordedDate"));
+        results.add(definition.getChildByName("occurrence[x]"));
+        results.add(definition.getChildByName("performed[x]"));
+        return results.stream()
+            .filter(d -> d != null)
+            .filter(BaseRuntimeDeclaredChildDefinition.class::isInstance)
+            .map(d -> (BaseRuntimeDeclaredChildDefinition) d)
+            .collect(Collectors.toList());
+    }
+
+    private void resolveAuthored(
+        ExtractRequest request,
+        String linkId,
+        IBaseResource resource,
+        BaseRuntimeElementDefinition<?> resourceDefinition) {
+        var authorPath = getAuthorPath(resourceDefinition);
+        if (authorPath != null) {
+            var authorValue = request.resolvePath(request.getQuestionnaireResponse(), "author");
+            if (authorValue != null) {
+                request.getModelResolver().setValue(resource, authorPath, authorValue);
+            }
+        }
+        var dateAuthored = request.resolvePath(request.getQuestionnaireResponse(), "authored", IPrimitiveType.class);
+        if (dateAuthored != null) {
+            var dateDefs = getDateDefs(resourceDefinition);
+            if (dateDefs != null && !dateDefs.isEmpty()) {
+                dateDefs.forEach(dateDef -> {
+                    if (dateDef instanceof BaseRuntimeChildDatatypeDefinition){
+                        try {
+                            var authoredValue = ((BaseRuntimeChildDatatypeDefinition) dateDef).getDatatype()
+                                .getConstructor(String.class)
+                                .newInstance(dateAuthored.getValueAsString());
+
+                            request.getModelResolver().setValue(resource, dateDef.getElementName(), authoredValue);
+                        } catch (Exception ex) {
+                            var message = String.format(
+                                "Error encountered processing item %s: Error setting property (%s) on resource type (%s): %s",
+                                linkId, dateDef.getElementName(), resource.fhirType(), ex.getMessage());
+                            logger.error(message);
+                            request.logException(message);
+                        }
+                    } else if (dateDef instanceof RuntimeChildChoiceDefinition){
+                        try {
+
+                            Class<? extends IBase> timeType = ((RuntimeChildChoiceDefinition) dateDef).getValidChildTypes()
+                                .stream()
+                                .filter(type -> type.getSimpleName().equals("DateTimeType"))
+                                .findFirst().orElse(null);
+
+                            if (timeType != null) {
+                                var authoredValue = timeType
+                                    .getConstructor(String.class)
+                                    .newInstance(dateAuthored.getValueAsString());
+                                request.getModelResolver().setValue(resource, dateDef.getElementName(), authoredValue);
+                            } else {
+                                var message = String.format(
+                                    "Error encountered processing item %s: Error setting property (%s) on resource type (%s) (choice doesn't include DateTime)",
+                                    linkId, dateDef.getElementName(), resource.fhirType());
+                                logger.info(message);
+                            }
+                        } catch (Exception ex) {
+                            var message = String.format(
+                                "Error encountered processing item %s: Error setting property (%s) on resource type (%s): %s",
+                                linkId, dateDef.getElementName(), resource.fhirType(), ex.getMessage());
+                            logger.error(message);
+                            request.logException(message);
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    private String getSubjectPath(BaseRuntimeElementDefinition<?> definition) {
+        if (definition.getChildByName("subject") != null) {
+            return "subject";
+        }
+        return definition.getChildByName("patient") != null ? "patient" : null;
+    }
+
+    private String getAuthorPath(BaseRuntimeElementDefinition<?> definition) {
+        if (definition.getChildByName("recorder") != null) {
+            return "recorder";
+        }
+        return definition.getName().equals("Observation") || definition.getName().equals("RiskAssessment") ? "performer" : null;
+    }
+
+    private static String stripIndexTokens(String s) {
+        if (s == null) return null;
+        return s.replaceAll("\\[(?!x\\])[^\\]]*\\]", "");
     }
 }

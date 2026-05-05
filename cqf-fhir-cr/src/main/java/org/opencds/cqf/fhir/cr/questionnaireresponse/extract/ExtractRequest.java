@@ -39,28 +39,28 @@ public class ExtractRequest implements IQuestionnaireRequest {
     private IBaseOperationOutcome operationOutcome;
 
     public ExtractRequest(
-            IBaseResource questionnaireResponse,
-            IBaseResource questionnaire,
-            IIdType subjectId,
-            IBaseParameters parameters,
-            IBaseBundle bundle,
-            LibraryEngine libraryEngine,
-            ModelResolver modelResolver,
-            IInputParameterResolver inputParameterResolver) {
+        IBaseResource questionnaireResponse,
+        IBaseResource questionnaire,
+        IIdType subjectId,
+        IBaseParameters parameters,
+        IBaseBundle bundle,
+        LibraryEngine libraryEngine,
+        ModelResolver modelResolver,
+        IInputParameterResolver inputParameterResolver) {
         checkNotNull(questionnaireResponse, "expected non-null value for questionnaireResponse");
         checkNotNull(libraryEngine, "expected non-null value for libraryEngine");
         checkNotNull(modelResolver, "expected non-null value for modelResolver");
         fhirVersion = questionnaireResponse.getStructureFhirVersionEnum();
         questionnaireResponseAdapter = getAdapterFactory().createQuestionnaireResponse(questionnaireResponse);
         questionnaireAdapter =
-                questionnaire == null ? null : getAdapterFactory().createQuestionnaire(questionnaire);
+            questionnaire == null ? null : getAdapterFactory().createQuestionnaire(questionnaire);
         this.subjectId = subjectId;
         this.data = bundle;
         this.libraryEngine = libraryEngine;
         this.modelResolver = modelResolver;
         this.inputParameterResolver = inputParameterResolver != null
-                ? inputParameterResolver
-                : createResolver(libraryEngine.getRepository(), this.subjectId, null, null, parameters, this.data);
+            ? inputParameterResolver
+            : createResolver(libraryEngine.getRepository(), this.subjectId, null, null, parameters, this.data);
         fhirContext = this.libraryEngine.getRepository().fhirContext();
         referencedLibraries = Map.of();
     }
@@ -87,44 +87,54 @@ public class ExtractRequest implements IQuestionnaireRequest {
 
     public IItemComponentAdapter getQuestionnaireItem(IItemComponentAdapter item) {
         return hasQuestionnaire()
-                ? getQuestionnaireItem(item, getQuestionnaireAdapter().getItem())
-                : null;
+            ? getQuestionnaireItem(item, getQuestionnaireAdapter().getItem())
+            : null;
     }
 
     public <T extends IItemComponentAdapter> IItemComponentAdapter getQuestionnaireItem(
-            T item, List<? extends IItemComponentAdapter> qItems) {
+        T item, List<? extends IItemComponentAdapter> qItems) {
         return qItems != null
-                ? qItems.stream()
-                        .filter(i -> i.getLinkId().equals(item.getLinkId()))
-                        .findFirst()
-                        .orElse(null)
-                : null;
+            ? qItems.stream()
+            .filter(i -> i.getLinkId().equals(item.getLinkId()))
+            .findFirst()
+            .orElse(null)
+            : null;
     }
 
     public boolean isDefinitionItem(ItemPair item) {
         var targetItem = item.getItem() == null ? item.getResponseItem() : item.getItem();
         return targetItem.hasExtension(Constants.SDC_QUESTIONNAIRE_ITEM_EXTRACTION_CONTEXT)
-                || targetItem.hasExtension(Constants.SDC_QUESTIONNAIRE_DEFINITION_EXTRACT)
-                || StringUtils.isNotBlank(targetItem.getDefinition());
+            || targetItem.hasExtension(Constants.SDC_QUESTIONNAIRE_DEFINITION_EXTRACT)
+            || StringUtils.isNotBlank(targetItem.getDefinition());
+    }
+
+    public boolean isObservationItem(ItemPair item) {
+        if (item.getItem() == null || item.getItem().get() == null) return false;
+        return !resolvePathList((IBase) item.getItem().get(), "code").isEmpty();
+    }
+
+    public boolean hasAnswer(ItemPair item) {
+        if (item.getResponseItem() == null || item.getResponseItem().get() == null) return false;
+        return !resolvePathList((IBase) item.getResponseItem().get(), "answer").isEmpty();
     }
 
     @SuppressWarnings("unchecked")
     public <T extends IBaseExtension<?, ?>> T getDefinitionExtract() {
         var qrExt = questionnaireResponseAdapter.getExtension().stream()
-                .filter(e -> e.getUrl().equals(Constants.SDC_QUESTIONNAIRE_ITEM_EXTRACTION_CONTEXT)
-                        || e.getUrl().equals(Constants.SDC_QUESTIONNAIRE_DEFINITION_EXTRACT))
-                .findFirst()
-                .orElse(null);
+            .filter(e -> e.getUrl().equals(Constants.SDC_QUESTIONNAIRE_ITEM_EXTRACTION_CONTEXT)
+                || e.getUrl().equals(Constants.SDC_QUESTIONNAIRE_DEFINITION_EXTRACT))
+            .findFirst()
+            .orElse(null);
         if (qrExt != null) {
             return (T) qrExt;
         }
         return questionnaireAdapter == null
-                ? null
-                : (T) questionnaireAdapter.getExtension().stream()
-                        .filter(e -> e.getUrl().equals(Constants.SDC_QUESTIONNAIRE_ITEM_EXTRACTION_CONTEXT)
-                                || e.getUrl().equals(Constants.SDC_QUESTIONNAIRE_DEFINITION_EXTRACT))
-                        .findFirst()
-                        .orElse(null);
+            ? null
+            : (T) questionnaireAdapter.getExtension().stream()
+                .filter(e -> e.getUrl().equals(Constants.SDC_QUESTIONNAIRE_ITEM_EXTRACTION_CONTEXT)
+                    || e.getUrl().equals(Constants.SDC_QUESTIONNAIRE_DEFINITION_EXTRACT))
+                .findFirst()
+                .orElse(null);
     }
 
     public String getExtractId() {

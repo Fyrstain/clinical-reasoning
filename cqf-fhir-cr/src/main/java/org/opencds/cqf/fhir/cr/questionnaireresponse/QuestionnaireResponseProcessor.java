@@ -22,6 +22,7 @@ import org.opencds.cqf.fhir.cr.questionnaireresponse.extract.ExtractProcessor;
 import org.opencds.cqf.fhir.cr.questionnaireresponse.extract.ExtractRequest;
 import org.opencds.cqf.fhir.cr.questionnaireresponse.extract.IExtractProcessor;
 import org.opencds.cqf.fhir.utility.SearchHelper;
+import org.opencds.cqf.fhir.utility.model.DynamicModelResolver;
 import org.opencds.cqf.fhir.utility.model.FhirModelResolverCache;
 import org.opencds.cqf.fhir.utility.monad.Either;
 import org.slf4j.Logger;
@@ -157,6 +158,7 @@ public class QuestionnaireResponseProcessor {
         var questionnaireResponse = resolveQuestionnaireResponse(questionnaireResponseId);
         var questionnaire = resolveQuestionnaire(questionnaireResponse, questionnaireId);
         var subject = (IBaseReference) modelResolver.resolvePath(questionnaireResponse, "subject");
+        ModelResolver dynamic = new DynamicModelResolver(modelResolver, repository.fhirContext());
         var request = new ExtractRequest(
                 questionnaireResponse,
                 questionnaire,
@@ -164,7 +166,7 @@ public class QuestionnaireResponseProcessor {
                 parameters,
                 data,
                 libraryEngine,
-                modelResolver,
+                dynamic,
                 null);
         var processor = extractProcessor != null ? extractProcessor : new ExtractProcessor();
         return processor.extract(request);
